@@ -1,5 +1,8 @@
 import pygame
 import random
+import copy
+
+from GreedyTetris import bfs
 
 colors = [
     (0, 0, 0),
@@ -26,9 +29,13 @@ class Figure:
         [[1, 2, 5, 6]],
     ]
 
-    def __init__(self, x, y):
+    def __init__(self, x, y, block_type, color, rotation):
         self.x = x
         self.y = y
+        if block_type is not None:
+            self.type = block_type
+            self.color = color
+            self.rotation = rotation
         self.type = random.randint(0, len(self.figures) - 1)
         self.color = random.randint(1, len(colors) - 1)
         self.rotation = 0
@@ -51,6 +58,7 @@ class Tetris:
     y = 60
     zoom = 20
     figure = None
+    best_score = float('inf')
 
     def __init__(self, height, width):
         self.height = height
@@ -65,7 +73,7 @@ class Tetris:
             self.field.append(new_line)
 
     def new_figure(self):
-        self.figure = Figure(3, 0)
+        self.figure = Figure(3, 0, None, None, None)
 
     def intersects(self):
         intersection = False
@@ -76,6 +84,18 @@ class Tetris:
                             j + self.figure.x > self.width - 1 or \
                             j + self.figure.x < 0 or \
                             self.field[i + self.figure.y][j + self.figure.x] > 0:
+                        intersection = True
+        return intersection
+
+    def intersects_with_figure(self, figure, dx, dy):
+        intersection = False
+        for i in range(4):
+            for j in range(4):
+                if i * 4 + j in figure.image():
+                    if i + dy + figure.y > self.height - 1 or \
+                            j + dx + figure.x > self.width - 1 or \
+                            j + dx + figure.x < 0 or \
+                            self.field[i + dy + figure.y][j + dx + figure.x] > 0:
                         intersection = True
         return intersection
 
@@ -127,6 +147,92 @@ class Tetris:
         if self.intersects():
             self.figure.rotation = old_rotation
 
+    # go all the way to the right, then all the way down, then all the way to the left, and then down
+    def go_default(self):
+        while not self.intersects():
+            self.figure.x += 1
+        self.figure.x -= 1
+        while not self.intersects():
+            self.figure.y += 1
+        self.figure.y -= 1
+        while not self.intersects():
+            self.figure.x -= 1
+        self.figure.x += 1
+        while not self.intersects():
+            self.figure.y += 1
+        self.figure.y -= 1
+        self.freeze()
+
+    def calc_heuristic_height(self, field, figure):
+        for i1 in range(4):
+            for j2 in range(4):
+                if i1 * 4 + j2 in figure.image():
+                    field[i1 + figure.y][j2 + figure.x] = figure.color
+
+        score = 0
+        for r in range(self.height):
+            rule1 = 0
+            rule2 = 0
+            rule3 = 0
+            for c in range(self.width):
+                if field[r][c] == 0:
+                    if r < self.height - 1 and c < self.width - 1:
+                        if field[r][c + 1] != 0 or (r > 0 and field[r + 1][c + 1]):
+                            rule1 += 1
+                    if field[r - 1][c] == 0:
+                        rule2 += 1
+                    if 0 < r < self.height - 1 and 0 < c < self.width - 1:
+                        if field[r][c - 1] != 0 or (r > 0 and field[r - 1][c - 1]):
+                            rule3 += 1
+
+            score += rule1 * (r ** 2)
+            score += rule2 * (r ** 3)
+            score += rule3 * (r ** 2)
+
+        return score
+
+    def get_successors(self, curr_figure, actions):
+        successors = []
+
+        if (len(actions) != 0 and actions[len(actions) - 1] == "space") \
+                or self.intersects_with_figure(curr_figure, 0, 0):
+            return successors
+
+        # limit actions so they don't repeat
+        if len(actions) == 3:
+            copied_figure = Figure(curr_figure.x, curr_figure.y, curr_figure.type, curr_figure.color,
+                                   curr_figure.rotation)
+            successors.append(
+                (curr_figure, "space", self.calc_heuristic_height(copy.deepcopy(self.field), copied_figure)))
+            return successors
+
+        copied_figure = Figure(curr_figure.x, curr_figure.y, curr_figure.type, curr_figure.color,
+                               curr_figure.rotation)
+        copied_figure.rotate()
+        if not self.intersects_with_figure(copied_figure, 0, 0):
+            successors.append(
+                (copied_figure, "rotate", self.calc_heuristic_height(copy.deepcopy(self.field), copied_figure)))
+
+        if not self.intersects_with_figure(curr_figure, 1, 0) and curr_figure.x + 1 < 7:
+            copied_figure = Figure(curr_figure.x + 1, curr_figure.y, curr_figure.type, curr_figure.color,
+                                   curr_figure.rotation)
+            successors.append(
+                (copied_figure, "right", self.calc_heuristic_height(copy.deepcopy(self.field), copied_figure)))
+
+        if not self.intersects_with_figure(curr_figure, -1, 0):
+            copied_figure = Figure(curr_figure.x - 1, curr_figure.y, curr_figure.type, curr_figure.color,
+                                   curr_figure.rotation)
+            successors.append(
+                (copied_figure, "left", self.calc_heuristic_height(copy.deepcopy(self.field), copied_figure)))
+
+        if not self.intersects_with_figure(curr_figure, 0, 1) and curr_figure.y + 1 < 17:
+            copied_figure = Figure(curr_figure.x, curr_figure.y + 1, curr_figure.type, curr_figure.color,
+                                   curr_figure.rotation)
+            successors.append(
+                (copied_figure, "down", self.calc_heuristic_height(copy.deepcopy(self.field), copied_figure)))
+
+        return successors
+
 
 # Initialize the game engine
 pygame.init()
@@ -146,44 +252,36 @@ done = False
 clock = pygame.time.Clock()
 fps = 25
 game = Tetris(20, 10)
-counter = 0
 
-pressing_down = False
-
+action_seq = []
 while not done:
     ######################################################################
     # this is where we modify to include AI work
 
     if game.figure is None:
         game.new_figure()
-    counter += 1
-    if counter > 100000:
-        counter = 0
-
-    if counter % (fps // game.level // 2) == 0 or pressing_down:
-        if game.state == "start":
-            game.go_down()
 
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done = True
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                game.rotate()
-            if event.key == pygame.K_DOWN:
-                pressing_down = True
-            if event.key == pygame.K_LEFT:
-                game.go_side(-1)
-            if event.key == pygame.K_RIGHT:
-                game.go_side(1)
-            if event.key == pygame.K_SPACE:
-                game.go_space()
-            if event.key == pygame.K_ESCAPE:
-                game.__init__(20, 10)
 
-    if event.type == pygame.KEYUP:
-            if event.key == pygame.K_DOWN:
-                pressing_down = False
+    if game.state != "gameover":
+        if len(action_seq) > 0:
+            action = action_seq.pop()
+            if action == "right":
+                game.go_side(1)
+            elif action == "left":
+                game.go_side(-1)
+            elif action == "down":
+                game.go_down()
+            elif action == "space":
+                game.go_space()
+            elif action == "rotate":
+                game.rotate()
+            else:
+                game.go_default()
+        else:
+            action_seq = bfs(game)
 
     # end of revision
     ######################################################################
@@ -211,12 +309,10 @@ while not done:
     font1 = pygame.font.SysFont('Calibri', 65, True, False)
     text = font.render("Score: " + str(game.score), True, BLACK)
     text_game_over = font1.render("Game Over", True, (255, 125, 0))
-    text_game_over1 = font1.render("Press ESC", True, (255, 215, 0))
 
     screen.blit(text, [0, 0])
     if game.state == "gameover":
         screen.blit(text_game_over, [20, 200])
-        screen.blit(text_game_over1, [25, 265])
 
     pygame.display.flip()
     clock.tick(fps)
