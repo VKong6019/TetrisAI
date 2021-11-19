@@ -1,8 +1,11 @@
+from collections import defaultdict
+
 import pygame
 import random
 import copy
 
 from GreedyTetris import bfs
+from AStarTetris import aStarSearch
 
 colors = [
     (0, 0, 0),
@@ -59,6 +62,8 @@ class Tetris:
     zoom = 20
     figure = None
     best_score = float('inf')
+    optimal_move = None
+    optimal_rotation = None
 
     def __init__(self, height, width):
         self.height = height
@@ -74,6 +79,7 @@ class Tetris:
 
     def new_figure(self):
         self.figure = Figure(3, 0, None, None, None)
+        self.best_move()
 
     def intersects(self):
         intersection = False
@@ -233,6 +239,103 @@ class Tetris:
 
         return successors
 
+    def get_a_star_successors(self, state):
+        successors = []
+        cost = 1
+
+        actions = ["down", "rotate", "left", "right"]
+        for a in actions:
+            copied_figure = Figure(state[0], state[1], self.figure.type, self.figure.color,
+                                   state[2])
+            newState = None
+            if a == "right" and state[0] < 6:
+                newState = (state[0] + 1, state[1], state[2])
+            elif a == "left" and state[0] > -4:
+                newState = (state[0] - 1, state[1], state[2])
+            elif a == "down" and state[1] < 16:
+                newState = (state[0], state[1] + 1, state[2])
+            elif a == "rotate":
+                copied_figure.rotate()
+                newState = (state[0], state[1], copied_figure.rotation)
+            if newState is not None:
+                successors.append((newState, a, cost))
+
+        # return a list of successors formatted as (new figure, action, cost)
+        return successors
+
+    # we want the lowest score/prioritize the lowest score
+    def calculate_all_heuristics(self, figure, dx):
+        field = copy.deepcopy(self.field)
+        score = 0
+
+        copied_figure = Figure(figure.x + dx, figure.y, figure.type, figure.color,
+                               figure.rotation)
+        # drop figure all the way to bottom and calculate score
+        while not self.intersects_with_figure(copied_figure, 0, 0):
+            copied_figure.y += 1
+        copied_figure.y -= 1
+
+        for i1 in range(4):
+            for j2 in range(4):
+                if i1 * 4 + j2 in copied_figure.image():
+                    field[i1 + copied_figure.y][j2 + copied_figure.x] = copied_figure.color
+
+        holes = 0
+        for r in range(self.height):
+            for c in range(self.width):
+                if field[r][c] == 0 and r > 0 and field[r - 1][c] == 0:
+                    holes += 1
+
+        height = self.get_height(field)
+
+        lines = 0
+        for i in range(1, self.height):
+            zeros = 0
+            for j in range(self.width):
+                if field[i][j] == 0:
+                    zeros += 1
+            if zeros == 0:
+                lines += 1
+        score -= lines ** 20
+
+        return score + height + holes
+
+    def get_height(self, field):
+        for c in range(self.width):
+            for r in range(self.height):
+                if field[r][c] == 1:
+                    return self.height - r - 1
+        return 0
+
+    def best_move(self):
+        best_score = float('inf')
+        work_x = None
+        work_rotation = None
+
+        for r in range(len(self.figure.figures[self.figure.type])):
+            for x in range(-3, self.width):
+                if not self.intersects_with_figure(self.figure, x, 0) and self.figure.x + x < 7:
+                    score = self.calculate_all_heuristics(self.figure, x)
+                    if work_x is None or best_score > score:
+                        work_rotation = r
+                        work_x = x
+                        best_score = score
+
+        copied_figure = Figure(work_x, self.figure.y, self.figure.type, self.figure.color,
+                               work_rotation)
+        while not self.intersects_with_figure(copied_figure, 0, 0):
+            copied_figure.y += 1
+        copied_figure.y -= 1
+
+        self.optimal_move = (work_x, copied_figure.y)
+        self.optimal_rotation = work_rotation
+
+    def is_goal_state_a_star(self, state):
+        return state[0] == self.optimal_move[0] and state[1] == self.optimal_move[
+            1] and state[2] == self.optimal_rotation
+
+    def manhattan_distance(self, xy):
+        return abs(xy[0] - self.optimal_move[0]) + abs(xy[1] - self.optimal_move[1])
 
 # Initialize the game engine
 pygame.init()
@@ -281,7 +384,7 @@ while not done:
             else:
                 game.go_default()
         else:
-            action_seq = bfs(game)
+            action_seq = aStarSearch(game)
 
     # end of revision
     ######################################################################
