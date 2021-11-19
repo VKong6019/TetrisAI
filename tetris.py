@@ -1,5 +1,6 @@
 import pygame
 import random
+from GeneticTetris import GeneticTetris
 
 colors = [
     (0, 0, 0),
@@ -167,23 +168,25 @@ while not done:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             done = True
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_UP:
-                game.rotate()
-            if event.key == pygame.K_DOWN:
-                pressing_down = True
-            if event.key == pygame.K_LEFT:
-                game.go_side(-1)
-            if event.key == pygame.K_RIGHT:
+    
+    if game.state != "gameover":
+        if len(action_seq) > 0:
+            action = action_seq.pop()
+            if action == "right":
                 game.go_side(1)
-            if event.key == pygame.K_SPACE:
+            elif action == "left":
+                game.go_side(-1)
+            elif action == "down":
+                game.go_down()
+            elif action == "space":
                 game.go_space()
-            if event.key == pygame.K_ESCAPE:
-                game.__init__(20, 10)
-
-    if event.type == pygame.KEYUP:
-            if event.key == pygame.K_DOWN:
-                pressing_down = False
+            elif action == "rotate":
+                game.rotate()
+            else:
+                game.go_default()
+        else:
+            # AI heuristics
+            action_seq = GeneticTetris.getBestMove(game)
 
     # end of revision
     ######################################################################
@@ -208,10 +211,10 @@ while not done:
                                       game.zoom - 2, game.zoom - 2])
 
     font = pygame.font.SysFont('Calibri', 25, True, False)
-    font1 = pygame.font.SysFont('Calibri', 65, True, False)
+    font1 = pygame.font.SysFont('Calibri', 50, True, False)
     text = font.render("Score: " + str(game.score), True, BLACK)
     text_game_over = font1.render("Game Over", True, (255, 125, 0))
-    text_game_over1 = font1.render("Press ESC", True, (255, 215, 0))
+    text_game_over1 = font.render("Press ESC to replay", True, (255, 215, 0))
 
     screen.blit(text, [0, 0])
     if game.state == "gameover":
