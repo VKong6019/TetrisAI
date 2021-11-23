@@ -1,16 +1,22 @@
 import random
+    
+class Move():
 
-class GeneticTetris():
+    def __init__(self):
 
-    def __init__(self, genes, population):
-        # initialize population of possible solutions
-        self.genes = genes
-        self.population = population
+
+
+
+class Genetics():
+
+    def __init__(self, size):
+        self.size = size
+        self.moves = [Move() for i in range(size)] # initialize population of possible solutions
         self.generations = 0
         self.fitness = self.getFitness()
 
     def getFitness(self):
-        
+
 
     def weightedBy(moves):
         return
@@ -41,4 +47,3 @@ class GeneticTetris():
                 newMoves.append(newMove)
             moves = newMoves
         return bestMove
-

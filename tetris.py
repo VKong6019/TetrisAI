@@ -87,7 +87,6 @@ class Tetris:
                     self.field[i + self.figure.y][j + self.figure.x] = self.figure.color
         self.break_lines()
         self.new_figure()
-
         if self.intersects():
             self.state = "gameover"
 
@@ -178,6 +177,10 @@ class Tetris:
         self.figure.rotate()
         if self.intersects():
             self.figure.rotation = old_rotation
+
+    def get_string_field(self):
+        print(np.array(self.field))
+
 
 
     ### CALCULATIONS ###
@@ -385,8 +388,21 @@ while not done:
         game.new_figure()
 
     for event in pygame.event.get():
-    #     if event.type == pygame.QUIT:
-    #         done = True
+        if event.type == pygame.QUIT:
+            done = True
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_UP:
+                game.rotate()
+            if event.key == pygame.K_DOWN:
+                game.go_down()
+            if event.key == pygame.K_LEFT:
+                game.go_side(-1)
+            if event.key == pygame.K_RIGHT:
+                game.go_side(1)
+            if event.key == pygame.K_SPACE:
+                game.go_space()
+            if event.key == pygame.K_ESCAPE:
+                game.__init__(20, 10)
     
         if game.state != "gameover":
             print(action_seq)
