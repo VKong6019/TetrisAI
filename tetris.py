@@ -4,6 +4,7 @@ import pygame
 import numpy as np
 # from GeneticTetris import GeneticTetris
 from models.Tetris import Tetris
+from GeneticTetris import Genetics, Solution
 from GreedyTetris import bfs
 from AStarTetris import aStarSearch
 
@@ -81,10 +82,11 @@ while not done:
                 else:
                     game.go_default()
             else:
-                game.get_string_field()
+                # game.get_string_field()
                 # AI heuristics
                 # action_seq = aStarSearch(game)
-                # action_seq = GeneticTetris.getBestMove(game)
+                # action_seq = Genetics(game)
+                Solution(game).getFitness()
 
     # end of revision
     ######################################################################

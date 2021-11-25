@@ -5,6 +5,13 @@ import copy
 
 line_scores = { 0:0, 1: 40, 2: 100, 3: 300, 4: 1200 }
 
+rotation_map = {
+    1: 'RIGHT',
+    2: 'DOWN',
+    3: 'LEFT',
+    4: 'UP',
+}
+
 class Tetris:
     height = 0
     width = 0
@@ -118,7 +125,6 @@ class Tetris:
         while not self.intersects():
             self.figure.y += 1
         self.figure.y -= 1
-        print("DEFAULT")
         self.freeze()
 
     def rotate(self):
@@ -126,9 +132,6 @@ class Tetris:
         self.figure.rotate()
         if self.intersects():
             self.figure.rotation = old_rotation
-
-    def get_string_field(self):
-        print(np.array(self.field))
 
 
         ### CALCULATIONS ###
@@ -208,8 +211,7 @@ class Tetris:
 
         actions = ["down", "rotate", "left", "right"]
         for a in actions:
-            copied_figure = Figure(state[0], state[1], self.figure.type, self.figure.color,
-                                    state[2])
+            copied_figure = Figure(state[0], state[1], self.figure.type, self.figure.color, state[2])
             newState = None
             if a == "right" and state[0] < 6:
                 newState = (state[0] + 1, state[1], state[2])
@@ -225,6 +227,40 @@ class Tetris:
 
         # return a list of successors formatted as (new figure, action, cost)
         return successors
+
+    # GENETIC ALGORITHM:
+    # Calculate best move (piece drop) for given state and piece based on fitness function
+    def getBestMove(self, tetromino, data):
+        # print("PIECE: ", tetromino)
+        best_move = None
+        best_score = -999999
+        actions = ["down", "rotate", "left", "right"]
+
+        # calculate best move for each rotation
+        for _ in rotation_map.keys():
+            # create new simulation state for all actions (right/left/down)
+            copied_state = copy.deepcopy(self)
+            for a in actions:
+                if a == "right" and copied_state.x < 6:
+                    copied_state.figure.x = copied_state.figure.x + 1
+                elif a == "left" and copied_state.x > -4:
+                    copied_state.figure.x = copied_state.figure.x - 1
+                elif a == "down" and copied_state.y < 16:
+                    copied_state.figure.y = copied_state.figure.y + 1
+                
+                # for every column drop piece and calculate score
+                while not copied_state.intersects():
+                    copied_state.figure.y += 1
+                copied_state.figure.y -= 1
+                copied_state.freeze()
+                score = sum(self.get_score(copied_state))
+                # keep track of best move by highest score
+                if score > best_score:
+                    best_move = copied_state
+        # returns state with best move
+        return best_move, score
+        
+
 
     # we want the lowest score/prioritize the lowest score
     def calculate_all_heuristics(self, figure, dx):
@@ -263,12 +299,53 @@ class Tetris:
 
         return score + height + holes
 
+
+    # TODO: Fix
     def get_height(self, field):
         for c in range(self.width):
             for r in range(self.height):
                 if field[r][c] == 1:
                     return self.height - r - 1
         return 0
+
+    # Returns height of each column in array
+    def get_heights(self, state):
+        heights = np.array([])
+        for col in range(state.shape[1]):
+            if 1 in state[:, col]:
+                p = state.shape[0] - np.argmax(state[:, col], axis=0)
+                heights = np.append(heights, p)
+            else:
+                heights = np.append(heights, 0)
+        return heights
+
+    def get_holes(self, heights, state):
+        holes = []
+        for col in range(state.shape[1]):
+            start = -heights[col]
+            # If there's no holes i.e. no blocks on that column
+            if start == 0:
+                holes.append(0)
+            else:
+                holes.append(np.count_nonzero(state[int(start):, col] == 0))
+        return holes
+
+    # Returns max height difference of columns in array
+    def get_max_height_diff(self, state):
+        # print(np.min(state))
+        return np.max(state) - np.min(state)
+
+    # Provides weighted score array
+    def get_score(self, state):
+        stateArray = np.array(state.field)
+        heights = self.get_heights(stateArray)
+        holes = self.get_holes(heights, stateArray)
+        max_height_diff = self.get_max_height_diff(stateArray)
+        # print("HEIGHTS: ", heights)
+        # print("HOLES: ", holes)
+        # print("MAX HEIGHT DIFF: ", max_height_diff)
+        return [np.mean(heights) ** 2.2, max_height_diff ** 1.2, np.sum(holes) ** 3.5]
+
 
     def best_move(self):
         best_score = float('inf')
