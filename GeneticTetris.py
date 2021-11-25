@@ -36,13 +36,20 @@ class Solution():
         return np.average(scores)
 
     # Cross genes between two solutions
-    def reproduceWith(solution2):
-        # Compare weighted average between genetic values of chromosomes
-        return
+    def reproduceWith(self, solution2):
+        # Compare weighted average between genetic values of solutions
+        weighted_avg = self.getFitness() + solution2.getFitness()
+        # Combine genes
+        combined_solution = ((self.genes * self.getFitness()) + (solution2.genes * solution2.getFitness())) / weighted_avg
+        return combined_solution
 
-    # 
-    def mutate():
-        return
+    # Mutate weights
+    def mutate(self, solution2):
+        mutation_amt = np.random.random_sample(self.genes)
+        if (mutation_amt < self.mutation_prob):
+            genes = (self.genes * (1 - mutation_amt)) + (solution2.genes * mutation_amt)
+            self.genes = genes
+        return self
 
 
 class Genetics():
@@ -61,22 +68,26 @@ class Genetics():
     def weightedRandomChoices(self, solutions, weights):
         return
 
+    def getBestIndividual(self, solutions):
+        return sorted(self.population, key=lambda gene: gene.getFitness())[-1]
+
+
     # returns the best individual given possible solutions and fitness weight function
     def genetics(self, solutions):
         # select most fit individuals
-        while True:
-            # assign each individual a fitness value according to fitness function
-            new_solutions = []
-            weights = self.weightedBy(solutions)
+        
+        # assign each individual a fitness value according to fitness function
+        new_solutions = []
+        weights = self.weightedBy(solutions)
 
-            for i in range(solutions):
-                curr_solution = solutions[i]
-                solution1, solution2 = self.weightedRandomChoices(solutions, weights)
-                new_solution = curr_solution.reproduceWith(solution2)
-                
-                # mutate occasionally
-                if (random.random() < 0.2):
-                    new_solution = curr_solution.mutate(new_solution)
-                new_solutions.append(new_solution)
-            solutions = new_solutions
-        return bestMove
+        for i in range(solutions):
+            curr_solution = solutions[i]
+            solution1, solution2 = self.weightedRandomChoices(solutions, weights)
+            new_solution = curr_solution.reproduceWith(solution2)
+            
+            # mutate occasionally
+            if (random.random() < 0.2):
+                new_solution = curr_solution.mutate(new_solution)
+            new_solutions.append(new_solution)
+
+        return self.getBestIndividual(new_solutions)
