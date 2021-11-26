@@ -1,6 +1,7 @@
 from models.Figure import Figure
 import numpy as np
 import random
+import time
 import copy
 
 line_scores = { 0:0, 1: 40, 2: 100, 3: 300, 4: 1200 }
@@ -49,6 +50,17 @@ class Tetris:
         if self.intersects():
             self.state = "gameover"
 
+    # Calculates line breaks but doesn't generate new piece
+    # Used for simulations
+    def simulate_freeze(self):
+        for i in range(4):  
+            for j in range(4):
+                if i * 4 + j in self.figure.image():
+                    self.field[i + self.figure.y][j + self.figure.x] = self.figure.color
+        self.break_lines()
+        if self.intersects():
+            self.state = "gameover"
+
     # Checks if any lines can be cleared
     def break_lines(self):
         lines = 0
@@ -65,7 +77,7 @@ class Tetris:
                         self.field[i1][j] = self.field[i1 - 1][j]
         self.score += line_scores[lines]
 
-    # Generates next Tetris piece and finds its best move
+    # Generates next Tetris piece
     def new_figure(self):
         self.figure = Figure(3, 0, None, None, None)
 
@@ -233,10 +245,12 @@ class Tetris:
 
     # GENETIC ALGORITHM:
     # Calculate best state for given state and piece based on optimal play
-    def getBestState(self, data):
-        for _ in range(100):
+    def get_best_state(self, data):
+        for _ in range(10):
             # drop optimal moves
-            best_move, best_score = self.getBestMove() # (self.figure.x, self.figure.rotation)
+            best_move, best_score = self.get_best_move() # (self.figure.x, self.figure.rotation)
+            print("BEST MOVE: ", best_move)
+            print("BEST SCORE: ", best_score)
             self.figure.x = best_move[0]
             self.figure.rotation = best_move[1]
 
@@ -244,29 +258,44 @@ class Tetris:
                 self.figure.y += 1
             self.figure.y -= 1
             self.freeze()
+            print("FINAL STATE: ")
+            self.get_string_field()
+            time.sleep(5)
         return self, best_score
 
 
     # Calculate best move (piece drop) for given state
-    def getBestMove(self):
-        best_score = -999999
+    def get_best_move(self):
+        best_score = 999999
         best_move = None 
+        copied_figure = self.figure
         # calculate best move for each rotation
-        for _ in rotation_map.keys():
+        for rotate_num in rotation_map.keys():
             # for every column drop piece and calculate score
-            for col in range(self.width - 3):
+            for col in range(self.width - 3): # TODO: FIX RANGE? (cuts off early)
+                # simulate new states
                 copied_state = copy.deepcopy(self)
-                self.figure.x = col
+                copied_state.figure = copied_figure
+                copied_state.figure.x = col
+                for _ in range(rotate_num):
+                    copied_state.figure.rotate()
+                print("COL", col)
                 while not copied_state.intersects():
                     copied_state.figure.y += 1
                 copied_state.figure.y -= 1
-                copied_state.freeze()
+                copied_state.simulate_freeze()
+                # print("X: ", copied_state.figure.x)
+                # print("Y: ", copied_state.figure.y)
+                # print("Rotation: ", copied_state.figure.rotation)
+                # print("STATE: ")
+                copied_state.get_string_field()
 
-                score = sum(self.get_score(np.asarray(copied_state.field)))
-                # keep track of best move by highest score
-                if score > best_score:
+                score = sum(copied_state.get_score())
+                # print("SCORE: ", score)
+                # keep track of best move by LOWEST score
+                if score < best_score:
                     best_score = score
-                    best_move = (self.figure.x, self.figure.rotation)
+                    best_move = (copied_state.figure.x, copied_state.figure.rotation)
         # (self.figure.x, self.figure.rotation)
         return best_move, best_score
     
@@ -309,7 +338,7 @@ class Tetris:
         return score + height + holes
 
 
-    # TODO: Fix
+    # TODO: Fix??
     def get_height(self, field):
         for c in range(self.width):
             for r in range(self.height):
@@ -319,40 +348,35 @@ class Tetris:
 
     # Returns height of each column in array
     def get_heights(self, state):
-        heights = np.array([])
-        for col in range(state.shape[1]):
-            if 1 in state[:, col]:
-                p = state.shape[0] - np.argmax(state[:, col], axis=0)
-                heights = np.append(heights, p)
-            else:
-                heights = np.append(heights, 0)
+        heights = []
+        for c in range(state.shape[1]):
+            height = self.height - next((index for index,value in enumerate(state[:, c]) if value != 0), self.height)
+            heights.append(height)
         return heights
 
     def get_holes(self, heights, state):
         holes = []
-        for col in range(state.shape[1]):
-            start = -heights[col]
-            # If there's no holes i.e. no blocks on that column
+        for c in range(state.shape[1]):
+            start = -heights[c] # check if there are any holes
             if start == 0:
                 holes.append(0)
             else:
-                holes.append(np.count_nonzero(state[int(start):, col] == 0))
+                holes.append(np.count_nonzero(state[int(start):, c] == 0))
         return holes
 
     # Returns max height difference of columns in array
     def get_max_height_diff(self, state):
-        # print("MAX: ", np.max(state))
-        # print("MIN: ", np.min(state))
         return np.max(state) - np.min(state)
 
     # Provides weighted score array
-    def get_score(self, state):
+    def get_score(self):
+        state = np.asarray(self.field)
         heights = self.get_heights(state)
         holes = self.get_holes(heights, state)
         max_height_diff = self.get_max_height_diff(state)
-        # print("HEIGHTS: ", heights)
-        # print("HOLES: ", holes)
-        return [np.mean(heights) ** 2.2, max_height_diff ** 1.2, np.sum(holes) ** 3.5]
+        # print("AVG HEIGHTS: ", np.mean(heights))
+        # print("NUM HOLES: ", np.sum(holes))
+        return [np.mean(heights) ** 5.0, max_height_diff ** 1.2, np.sum(holes) ** 3.5]
 
 
     def best_move(self):

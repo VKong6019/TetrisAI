@@ -14,14 +14,14 @@ class Solution():
     def __init__(self, state):
         self.game = state
         self.fitness = None
-        self.genes = self.generateGenes()
+        self.weights = self.generateWeights()
         self.simulations = NUM_SIMULATIONS
         self.max_simulations = SIMULATION_LENGTH
         self.mutation_prob = MUTATION_PROB
 
 
-    # generate random genetic values
-    def generateGenes(self):
+    # generate random genetic values that represents weights
+    def generateWeights(self):
         print("Generate genes: ", (np.random.random_sample(NUM_GENES) * 2) - 1)
 
         return (np.random.random_sample(NUM_GENES) * 2) - 1
@@ -29,14 +29,14 @@ class Solution():
     # Calculate overall score rating for move
     def getFitness(self):
         scores = []
-        for i in range(self.max_simulations):
+        # for i in range(self.max_simulations):
             # generate random tetromino and simulate best move
-            self.game.new_figure()
-            print("GENES: ", self.genes)
-            best_state, best_score = self.game.getBestState(self.genes)
-            self = best_state
-            print("BEST STATE: ", best_state.get_string_field())
-            scores.append(best_score)
+            # self.game.new_figure()
+            # print("GENES: ", self.weights)
+        best_state, best_score = self.game.get_best_state(self.weights)
+        self.game = best_state
+        scores.append(best_score)
+        print("FITNESS: ", np.average(scores)) 
         return np.average(scores)
 
     # Cross genes between two solutions
@@ -44,15 +44,15 @@ class Solution():
         # Compare weighted average between genetic values of solutions
         weighted_avg = self.getFitness() + solution2.getFitness()
         # Combine genes
-        combined_solution = ((self.genes * self.getFitness()) + (solution2.genes * solution2.getFitness())) / weighted_avg
+        combined_solution = ((self.weights * self.getFitness()) + (solution2.genes * solution2.getFitness())) / weighted_avg
         return combined_solution
 
     # Mutate weights
     def mutate(self, solution2):
-        mutation_amt = np.random.random_sample(self.genes)
+        mutation_amt = np.random.random_sample(self.weights)
         if (mutation_amt < self.mutation_prob):
-            genes = (self.genes * (1 - mutation_amt)) + (solution2.genes * mutation_amt)
-            self.genes = genes
+            genes = (self.weights * (1 - mutation_amt)) + (solution2.genes * mutation_amt)
+            self.weights = genes
         return self
 
 
@@ -68,6 +68,7 @@ class Genetics():
     def weightedBy(self):
         return sorted(self.solutions, key=lambda gene: gene.getFitness())
 
+    # TODO
     def weightedRandomChoices(self, solutions, weights):
         return
 
@@ -76,8 +77,9 @@ class Genetics():
 
 
     # TODO:
-    # - generate list of moves to return
-    # - each solution should represent 
+    # - generate list of moves to return(?)
+    # - each solution should represent genes of scoring weights
+    # - return solution with best weighted outcome
 
 
     # returns the best individual given possible solutions and fitness weight function
@@ -97,7 +99,7 @@ class Genetics():
 
             # Crossbreed surviving solutions
             for s in range(top_half, 2):
-                curr_solution = self.fittest_solutions[s]
+                curr_solution = fittest_solutions[s]
                 solution1, solution2 = self.weightedRandomChoices(self.solutions, weights) # TODO
 
                 new_solution = curr_solution.reproduceWith(solution2)
