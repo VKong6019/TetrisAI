@@ -25,6 +25,8 @@ class Tetris:
         self.field = []
         self.figure = None
         self.score = 0
+        self.moves = 0
+        self.lines_cleared = 0
         self.state = "start"
         self.best_score = float('inf')
         self.optimal_move = None
@@ -57,6 +59,7 @@ class Tetris:
                     zeros += 1
             if zeros == 0:
                 lines += 1
+                self.lines_cleared += 1
                 for i1 in range(i, 1, -1):
                     for j in range(self.width):
                         self.field[i1][j] = self.field[i1 - 1][j]
@@ -229,38 +232,44 @@ class Tetris:
         return successors
 
     # GENETIC ALGORITHM:
-    # Calculate best move (piece drop) for given state and piece based on fitness function
-    def getBestMove(self, tetromino, data):
-        # print("PIECE: ", tetromino)
-        best_move = None
-        best_score = -999999
-        actions = ["down", "rotate", "left", "right"]
+    # Calculate best state for given state and piece based on optimal play
+    def getBestState(self, data):
+        for _ in range(100):
+            # drop optimal moves
+            best_move, best_score = self.getBestMove() # (self.figure.x, self.figure.rotation)
+            self.figure.x = best_move[0]
+            self.figure.rotation = best_move[1]
 
+            while not self.intersects():
+                self.figure.y += 1
+            self.figure.y -= 1
+            self.freeze()
+        return self, best_score
+
+
+    # Calculate best move (piece drop) for given state
+    def getBestMove(self):
+        best_score = -999999
+        best_move = None 
         # calculate best move for each rotation
         for _ in rotation_map.keys():
-            # create new simulation state for all actions (right/left/down)
-            copied_state = copy.deepcopy(self)
-            for a in actions:
-                if a == "right" and copied_state.x < 6:
-                    copied_state.figure.x = copied_state.figure.x + 1
-                elif a == "left" and copied_state.x > -4:
-                    copied_state.figure.x = copied_state.figure.x - 1
-                elif a == "down" and copied_state.y < 16:
-                    copied_state.figure.y = copied_state.figure.y + 1
-                
-                # for every column drop piece and calculate score
+            # for every column drop piece and calculate score
+            for col in range(self.width - 3):
+                copied_state = copy.deepcopy(self)
+                self.figure.x = col
                 while not copied_state.intersects():
                     copied_state.figure.y += 1
                 copied_state.figure.y -= 1
                 copied_state.freeze()
-                score = sum(self.get_score(copied_state))
+
+                score = sum(self.get_score(np.asarray(copied_state.field)))
                 # keep track of best move by highest score
                 if score > best_score:
-                    best_move = copied_state
-        # returns state with best move
-        return best_move, score
-        
-
+                    best_score = score
+                    best_move = (self.figure.x, self.figure.rotation)
+        # (self.figure.x, self.figure.rotation)
+        return best_move, best_score
+    
 
     # we want the lowest score/prioritize the lowest score
     def calculate_all_heuristics(self, figure, dx):
@@ -332,18 +341,17 @@ class Tetris:
 
     # Returns max height difference of columns in array
     def get_max_height_diff(self, state):
-        # print(np.min(state))
+        # print("MAX: ", np.max(state))
+        # print("MIN: ", np.min(state))
         return np.max(state) - np.min(state)
 
     # Provides weighted score array
     def get_score(self, state):
-        stateArray = np.array(state.field)
-        heights = self.get_heights(stateArray)
-        holes = self.get_holes(heights, stateArray)
-        max_height_diff = self.get_max_height_diff(stateArray)
+        heights = self.get_heights(state)
+        holes = self.get_holes(heights, state)
+        max_height_diff = self.get_max_height_diff(state)
         # print("HEIGHTS: ", heights)
         # print("HOLES: ", holes)
-        # print("MAX HEIGHT DIFF: ", max_height_diff)
         return [np.mean(heights) ** 2.2, max_height_diff ** 1.2, np.sum(holes) ** 3.5]
 
 

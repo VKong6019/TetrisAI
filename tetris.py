@@ -66,27 +66,28 @@ while not done:
                 game.__init__(20, 10)
     
         if game.state != "gameover":
-            print(action_seq)
-            if len(action_seq) > 0:
-                action = action_seq.pop()
-                if action == "right":
-                    game.go_side(1)
-                elif action == "left":
-                    game.go_side(-1)
-                elif action == "down":
-                    game.go_down()
-                elif action == "space":
-                    game.go_space()
-                elif action == "rotate":
-                    game.rotate()
-                else:
-                    game.go_default()
-            else:
-                # game.get_string_field()
-                # AI heuristics
-                # action_seq = aStarSearch(game)
-                # action_seq = Genetics(game)
-                Solution(game).getFitness()
+            genetics = Genetics(game)
+            genetics.genetics()
+            
+            # if len(action_seq) > 0:
+            #     action = action_seq.pop()
+            #     if action == "right":
+            #         game.go_side(1)
+            #     elif action == "left":
+            #         game.go_side(-1)
+            #     elif action == "down":
+            #         game.go_down()
+            #     elif action == "space":
+            #         game.go_space()
+            #     elif action == "rotate":
+            #         game.rotate()
+            #     else:
+            #         game.go_default()
+            # else:
+            #     # game.get_string_field()
+            #     # AI heuristics
+            #     action_seq = aStarSearch(game)
+
 
     # end of revision
     ######################################################################
