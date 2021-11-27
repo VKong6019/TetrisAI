@@ -4,7 +4,7 @@ import random
 import time
 import copy
 
-line_scores = { 0:0, 1: 40, 2: 100, 3: 300, 4: 1200 }
+line_scores = {0: 0, 1: 40, 2: 100, 3: 300, 4: 1200}
 
 rotation_map = {
     1: 'RIGHT',
@@ -12,6 +12,7 @@ rotation_map = {
     3: 'LEFT',
     4: 'UP',
 }
+
 
 class Tetris:
     height = 0
@@ -53,7 +54,7 @@ class Tetris:
     # Calculates line breaks but doesn't generate new piece
     # Used for simulations
     def simulate_freeze(self):
-        for i in range(4):  
+        for i in range(4):
             for j in range(4):
                 if i * 4 + j in self.figure.image():
                     self.field[i + self.figure.y][j + self.figure.x] = self.figure.color
@@ -105,7 +106,6 @@ class Tetris:
                         intersection = True
         return intersection
 
-
     ### MOVEMENT ###
 
     def go_space(self):
@@ -148,8 +148,8 @@ class Tetris:
         if self.intersects():
             self.figure.rotation = old_rotation
 
-
         ### CALCULATIONS ###
+
     def calc_heuristic_height(self, field, figure):
         for i1 in range(4):
             for j2 in range(4):
@@ -188,13 +188,13 @@ class Tetris:
         # limit actions so they don't repeat
         if len(actions) == 3:
             copied_figure = Figure(curr_figure.x, curr_figure.y, curr_figure.type, curr_figure.color,
-                                    curr_figure.rotation)
+                                   curr_figure.rotation)
             successors.append(
                 (curr_figure, "space", self.calc_heuristic_height(copy.deepcopy(self.field), copied_figure)))
             return successors
 
         copied_figure = Figure(curr_figure.x, curr_figure.y, curr_figure.type, curr_figure.color,
-                                curr_figure.rotation)
+                               curr_figure.rotation)
         copied_figure.rotate()
         if not self.intersects_with_figure(copied_figure, 0, 0):
             successors.append(
@@ -202,19 +202,19 @@ class Tetris:
 
         if not self.intersects_with_figure(curr_figure, 1, 0) and curr_figure.x + 1 < 7:
             copied_figure = Figure(curr_figure.x + 1, curr_figure.y, curr_figure.type, curr_figure.color,
-                                    curr_figure.rotation)
+                                   curr_figure.rotation)
             successors.append(
                 (copied_figure, "right", self.calc_heuristic_height(copy.deepcopy(self.field), copied_figure)))
 
         if not self.intersects_with_figure(curr_figure, -1, 0):
             copied_figure = Figure(curr_figure.x - 1, curr_figure.y, curr_figure.type, curr_figure.color,
-                                    curr_figure.rotation)
+                                   curr_figure.rotation)
             successors.append(
                 (copied_figure, "left", self.calc_heuristic_height(copy.deepcopy(self.field), copied_figure)))
 
         if not self.intersects_with_figure(curr_figure, 0, 1) and curr_figure.y + 1 < 17:
             copied_figure = Figure(curr_figure.x, curr_figure.y + 1, curr_figure.type, curr_figure.color,
-                                    curr_figure.rotation)
+                                   curr_figure.rotation)
             successors.append(
                 (copied_figure, "down", self.calc_heuristic_height(copy.deepcopy(self.field), copied_figure)))
 
@@ -248,9 +248,9 @@ class Tetris:
     def get_best_state(self, data):
         for _ in range(10):
             # drop optimal moves
-            best_move, best_score = self.get_best_move() # (self.figure.x, self.figure.rotation)
-            print("BEST MOVE: ", best_move)
-            print("BEST SCORE: ", best_score)
+            best_move, best_score = self.get_best_move()  # (self.figure.x, self.figure.rotation)
+            #print("BEST MOVE: ", best_move)
+            #print("BEST SCORE: ", best_score)
             self.figure.x = best_move[0]
             self.figure.rotation = best_move[1]
 
@@ -258,29 +258,29 @@ class Tetris:
                 self.figure.y += 1
             self.figure.y -= 1
             self.freeze()
-            print("FINAL STATE: ")
-            self.get_string_field()
+            # print("FINAL STATE: ")
+            # self.get_string_field()
             time.sleep(5)
         return self, best_score
 
-
     # Calculate best move (piece drop) for given state
+    # TODO: there's a error where self.figures[self.type][self.rotation] gives list index out of range
+    #  for self.figures[6][1] because figure 6 only has 1 rotation config
     def get_best_move(self):
         best_score = 999999
-        best_move = None 
-        copied_figure = self.figure
+        best_move = None
+        copied_figure = Figure(self.figure.x, self.figure.y, self.figure.type, self.figure.color, self.figure.rotation)
         # calculate best move for each rotation
         for rotate_num in rotation_map.keys():
             # for every column drop piece and calculate score
-            for col in range(self.width - 3): # TODO: FIX RANGE? (cuts off early)
+            for col in range(-3, self.width - 3):
                 # simulate new states
                 copied_state = copy.deepcopy(self)
                 copied_state.figure = copied_figure
                 copied_state.figure.x = col
                 for _ in range(rotate_num):
                     copied_state.figure.rotate()
-                print("COL", col)
-                while not copied_state.intersects():
+                while not copied_state.intersects() and copied_state.figure.y < 17:
                     copied_state.figure.y += 1
                 copied_state.figure.y -= 1
                 copied_state.simulate_freeze()
@@ -288,7 +288,6 @@ class Tetris:
                 # print("Y: ", copied_state.figure.y)
                 # print("Rotation: ", copied_state.figure.rotation)
                 # print("STATE: ")
-                copied_state.get_string_field()
 
                 score = sum(copied_state.get_score())
                 # print("SCORE: ", score)
@@ -298,7 +297,6 @@ class Tetris:
                     best_move = (copied_state.figure.x, copied_state.figure.rotation)
         # (self.figure.x, self.figure.rotation)
         return best_move, best_score
-    
 
     # we want the lowest score/prioritize the lowest score
     def calculate_all_heuristics(self, figure, dx):
@@ -306,7 +304,7 @@ class Tetris:
         score = 0
 
         copied_figure = Figure(figure.x + dx, figure.y, figure.type, figure.color,
-                                figure.rotation)
+                               figure.rotation)
         # drop figure all the way to bottom and calculate score
         while not self.intersects_with_figure(copied_figure, 0, 0):
             copied_figure.y += 1
@@ -337,7 +335,6 @@ class Tetris:
 
         return score + height + holes
 
-
     # TODO: Fix??
     def get_height(self, field):
         for c in range(self.width):
@@ -350,14 +347,14 @@ class Tetris:
     def get_heights(self, state):
         heights = []
         for c in range(state.shape[1]):
-            height = self.height - next((index for index,value in enumerate(state[:, c]) if value != 0), self.height)
+            height = self.height - next((index for index, value in enumerate(state[:, c]) if value != 0), self.height)
             heights.append(height)
         return heights
 
     def get_holes(self, heights, state):
         holes = []
         for c in range(state.shape[1]):
-            start = -heights[c] # check if there are any holes
+            start = -heights[c]  # check if there are any holes
             if start == 0:
                 holes.append(0)
             else:
@@ -378,7 +375,6 @@ class Tetris:
         # print("NUM HOLES: ", np.sum(holes))
         return [np.mean(heights) ** 5.0, max_height_diff ** 1.2, np.sum(holes) ** 3.5]
 
-
     def best_move(self):
         best_score = float('inf')
         work_x = None
@@ -394,7 +390,7 @@ class Tetris:
                         best_score = score
 
         copied_figure = Figure(work_x, self.figure.y, self.figure.type, self.figure.color,
-                                work_rotation)
+                               work_rotation)
         while not self.intersects_with_figure(copied_figure, 0, 0):
             copied_figure.y += 1
         copied_figure.y -= 1
