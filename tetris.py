@@ -268,22 +268,22 @@ class Tetris:
         field = copy.deepcopy(self.field)
         score = 0
 
-        copied_figure = Figure(figure.x + dx, figure.y, figure.type, figure.color,
-                               figure.rotation)
         # drop figure all the way to bottom and calculate score
-        while not self.intersects_with_figure(copied_figure, 0, 0):
-            copied_figure.y += 1
-        copied_figure.y -= 1
+        y = 0
+        while not self.intersect_at_x_y_fig(figure, dx, y):
+            y += 1
+        y -= 1
 
         for i1 in range(4):
             for j2 in range(4):
-                if i1 * 4 + j2 in copied_figure.image():
-                    field[i1 + copied_figure.y][j2 + copied_figure.x] = copied_figure.color
+                if i1 * 4 + j2 in figure:
+                    field[i1 + y][j2 + dx] = 1
 
+        # TODO: i don't think it's counting holes correctly
         holes = 0
         for r in range(self.height):
             for c in range(self.width):
-                if field[r][c] == 0 and r > 0 and field[r - 1][c] == 0:
+                if field[r][c] == 0 and r > 0 and field[r - 1][c] > 0:
                     holes += 1
 
         height = self.get_height(field)
@@ -296,14 +296,14 @@ class Tetris:
                     zeros += 1
             if zeros == 0:
                 lines += 1
-        score -= lines ** 20
+        score -= lines * 20
 
         return score + height + holes
 
     def get_height(self, field):
-        for c in range(self.width):
-            for r in range(self.height):
-                if field[r][c] == 1:
+        for r in range(self.height):
+            for c in range(self.width):
+                if field[r][c] > 0:
                     return self.height - r - 1
         return 0
 
@@ -313,9 +313,10 @@ class Tetris:
         work_rotation = None
 
         for r in range(len(self.figure.figures[self.figure.type])):
+            work_figure = self.figure.figures[self.figure.type][r]
             for x in range(-3, self.width):
-                if not self.intersects_with_figure(self.figure, x, 0) and self.figure.x + x < 7:
-                    score = self.calculate_all_heuristics(self.figure, x)
+                if not self.intersect_at_x_y_fig(work_figure, x, 0):
+                    score = self.calculate_all_heuristics(work_figure, x)
                     if work_x is None or best_score > score:
                         work_rotation = r
                         work_x = x
@@ -323,12 +324,25 @@ class Tetris:
 
         copied_figure = Figure(work_x, self.figure.y, self.figure.type, self.figure.color,
                                work_rotation)
-        while not self.intersects_with_figure(copied_figure, 0, 0):
-            copied_figure.y += 1
-        copied_figure.y -= 1
+        y = 0
+        while not self.intersect_at_x_y_fig(self.figure.figures[self.figure.type][work_rotation], work_x, y):
+            y += 1
+        y -= 1
 
-        self.optimal_move = (work_x, copied_figure.y)
+        self.optimal_move = (work_x, y)
         self.optimal_rotation = work_rotation
+
+    def intersect_at_x_y_fig(self, figure, x, y):
+        intersection = False
+        for i in range(4):
+            for j in range(4):
+                if i * 4 + j in figure:
+                    if i + y > self.height - 1 or \
+                            j + x > self.width - 1 or \
+                            j + x < 0 or \
+                            self.field[i + y][j + x] > 0:
+                        intersection = True
+        return intersection
 
     def is_goal_state_a_star(self, state):
         return state[0] == self.optimal_move[0] and state[1] == self.optimal_move[
