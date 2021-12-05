@@ -1,8 +1,13 @@
 from collections import defaultdict
-from models.Tetris import Tetris
 
 import pygame
-import copy
+import numpy as np
+# from GeneticTetris import GeneticTetris
+from models.Tetris import Tetris
+from GeneticTetris import Genetics, Solution
+from GreedyTetris import bfs
+from AStarTetris import aStarSearch
+
 
 colors = [
     (0, 0, 0),
@@ -36,7 +41,6 @@ fps = 25
 game = Tetris(20, 10)
 
 action_seq = []
-
 while not done:
     ######################################################################
     # this is where we modify to include AI work
@@ -62,23 +66,28 @@ while not done:
                 game.__init__(20, 10)
     
         if game.state != "gameover":
-            print(action_seq)
-            if len(action_seq) > 0:
-                action = action_seq.pop()
-                if action == "right":
-                    game.go_side(1)
-                elif action == "left":
-                    game.go_side(-1)
-                elif action == "down":
-                    game.go_down()
-                elif action == "space":
-                    game.go_space()
-                elif action == "rotate":
-                    game.rotate()
-                else:
-                    game.go_default()
-            else:
-                game.get_string_field()
+            genetics = Genetics(game)
+            genetics.genetics()
+            
+            # if len(action_seq) > 0:
+            #     action = action_seq.pop()
+            #     if action == "right":
+            #         game.go_side(1)
+            #     elif action == "left":
+            #         game.go_side(-1)
+            #     elif action == "down":
+            #         game.go_down()
+            #     elif action == "space":
+            #         game.go_space()
+            #     elif action == "rotate":
+            #         game.rotate()
+            #     else:
+            #         game.go_default()
+            # else:
+            #     # game.get_string_field()
+            #     # AI heuristics
+            #     action_seq = aStarSearch(game)
+
 
     # end of revision
     ######################################################################
