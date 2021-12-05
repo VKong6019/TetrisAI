@@ -117,7 +117,7 @@ class Tetris:
                 for i1 in range(i, 1, -1):
                     for j in range(self.width):
                         self.field[i1][j] = self.field[i1 - 1][j]
-        self.score += lines ** 2
+        self.score += lines * 100
 
     def go_space(self):
         while not self.intersects():
@@ -241,10 +241,10 @@ class Tetris:
 
     def get_a_star_successors(self, state):
         successors = []
-        cost = 1
 
         actions = ["down", "rotate", "left", "right"]
         for a in actions:
+            cost = 1
             copied_figure = Figure(state[0], state[1], self.figure.type, self.figure.color,
                                    state[2])
             newState = None
@@ -257,6 +257,8 @@ class Tetris:
             elif a == "rotate":
                 copied_figure.rotate()
                 newState = (state[0], state[1], copied_figure.rotation)
+                if copied_figure.rotation is self.optimal_rotation:
+                    cost = 0
             if newState is not None:
                 successors.append((newState, a, cost))
 
@@ -322,8 +324,6 @@ class Tetris:
                         work_x = x
                         best_score = score
 
-        copied_figure = Figure(work_x, self.figure.y, self.figure.type, self.figure.color,
-                               work_rotation)
         y = 0
         while not self.intersect_at_x_y_fig(self.figure.figures[self.figure.type][work_rotation], work_x, y):
             y += 1
