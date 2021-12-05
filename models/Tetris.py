@@ -54,6 +54,7 @@ class Tetris:
     # Calculates line breaks but doesn't generate new piece
     # Used for simulations
     def simulate_freeze(self):
+        print("FREEZE: ", self.figure.image())
         for i in range(4):
             for j in range(4):
                 if i * 4 + j in self.figure.image():
@@ -99,10 +100,24 @@ class Tetris:
         for i in range(4):
             for j in range(4):
                 if i * 4 + j in figure.image():
+                    print("X: ", figure.x, "Y: ", figure.y)
                     if i + dy + figure.y > self.height - 1 or \
                             j + dx + figure.x > self.width - 1 or \
                             j + dx + figure.x < 0 or \
                             self.field[i + dy + figure.y][j + dx + figure.x] > 0:
+                        intersection = True
+        print(intersection)
+        return intersection
+
+    def intersect_at_x_y_fig(self, figure, x, y):
+        intersection = False
+        for i in range(4):
+            for j in range(4):
+                if i * 4 + j in figure.image():
+                    if i + y > self.height - 1 or \
+                            j + x > self.width - 1 or \
+                            j + x < 0 or \
+                            self.field[i + y][j + x] > 0:
                         intersection = True
         return intersection
 
@@ -246,56 +261,61 @@ class Tetris:
     # GENETIC ALGORITHM:
     # Calculate best state for given state and piece based on optimal play
     def get_best_state(self, data):
-        for _ in range(10):
+        for _ in range(1):
             # drop optimal moves
-            best_move, best_score = self.get_best_move()  # (self.figure.x, self.figure.rotation)
-            #print("BEST MOVE: ", best_move)
-            #print("BEST SCORE: ", best_score)
+            best_move, best_score = self.get_best_move()  # (self.figure.x, , self.figure.y, self.figure.rotation)
+            print("BEST MOVE: ", best_move)
+            print("BEST SCORE: ", best_score)
             self.figure.x = best_move[0]
-            self.figure.rotation = best_move[1]
-
+            self.figure.rotation = best_move[2]
+            # print("ACTUAL IMAGE: ", self.figure.image())
             while not self.intersects():
                 self.figure.y += 1
             self.figure.y -= 1
             self.freeze()
-            # print("FINAL STATE: ")
-            # self.get_string_field()
+            print("FINAL STATE: ")
+            self.get_string_field()
             time.sleep(5)
         return self, best_score
 
     # Calculate best move (piece drop) for given state
-    # TODO: there's a error where self.figures[self.type][self.rotation] gives list index out of range
-    #  for self.figures[6][1] because figure 6 only has 1 rotation config
     def get_best_move(self):
         best_score = 999999
         best_move = None
-        copied_figure = Figure(self.figure.x, self.figure.y, self.figure.type, self.figure.color, self.figure.rotation)
         # calculate best move for each rotation
-        for rotate_num in rotation_map.keys():
+        rotations = self.figure.figures[self.figure.type]
+        for r in range(len(rotations)):
+            copied_figure = self.figure.figures[self.figure.type][r]
             # for every column drop piece and calculate score
-            for col in range(-3, self.width - 3):
-                # simulate new states
-                copied_state = copy.deepcopy(self)
+            for x in range(-3, self.width - 3):
+                copied_state = copy.deepcopy(self) # simulate new states
+                copied_state.get_string_field()
+                print("+++++++++++")
+                print("ORG: ", copied_state.figure.x)
+                if copied_state.intersect_at_x_y_fig(copied_state.figure, x, 0):
+                    print("OUTTA BOUND: ", x)
+                    continue
+                copied_figure = Figure(x, copied_state.figure.y, copied_state.figure.type, copied_state.figure.color, r)
                 copied_state.figure = copied_figure
-                copied_state.figure.x = col
-                for _ in range(rotate_num):
-                    copied_state.figure.rotate()
-                while not copied_state.intersects() and copied_state.figure.y < 17:
-                    copied_state.figure.y += 1
-                copied_state.figure.y -= 1
-                copied_state.simulate_freeze()
-                # print("X: ", copied_state.figure.x)
-                # print("Y: ", copied_state.figure.y)
-                # print("Rotation: ", copied_state.figure.rotation)
-                # print("STATE: ")
 
+                while not copied_state.intersect_at_x_y_fig(copied_figure, x, copied_figure.y):
+                    copied_figure.y += 1
+                copied_figure.y -= 1
+                print("INTERSECTED Y: ", copied_figure.y)
+                copied_state.simulate_freeze()
+                print("STATE: ")
+                print("X: ", copied_state.figure.x)
+                print("Y: ", copied_state.figure.y)
+                copied_state.get_string_field()
                 score = sum(copied_state.get_score())
-                # print("SCORE: ", score)
+
                 # keep track of best move by LOWEST score
                 if score < best_score:
                     best_score = score
-                    best_move = (copied_state.figure.x, copied_state.figure.rotation)
-        # (self.figure.x, self.figure.rotation)
+                    best_move = (copied_state.figure.x, copied_state.figure.y, copied_state.figure.rotation)
+        
+        self.optimal_move = (best_move[0], best_move[1])
+        self.optimal_rotation = best_move[2]
         return best_move, best_score
 
     # we want the lowest score/prioritize the lowest score
@@ -303,17 +323,16 @@ class Tetris:
         field = copy.deepcopy(self.field)
         score = 0
 
-        copied_figure = Figure(figure.x + dx, figure.y, figure.type, figure.color,
-                               figure.rotation)
         # drop figure all the way to bottom and calculate score
-        while not self.intersects_with_figure(copied_figure, 0, 0):
-            copied_figure.y += 1
-        copied_figure.y -= 1
+        y = 0
+        while not self.intersect_at_x_y_fig(figure, dx, y):
+            y += 1
+        y -= 1
 
         for i1 in range(4):
             for j2 in range(4):
-                if i1 * 4 + j2 in copied_figure.image():
-                    field[i1 + copied_figure.y][j2 + copied_figure.x] = copied_figure.color
+                if i1 * 4 + j2 in figure:
+                    field[i1 + y][j2 + dx] = 1
 
         holes = 0
         for r in range(self.height):
