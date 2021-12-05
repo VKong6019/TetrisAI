@@ -183,12 +183,12 @@ class Tetris:
             for c in range(self.width):
                 if field[r][c] == 0:
                     if r < self.height - 1 and c < self.width - 1:
-                        if field[r][c + 1] != 0 or (r > 0 and field[r + 1][c + 1]):
+                        if field[r][c + 1] != 0 or (r > 0 and field[r + 1][c + 1] != 0):
                             rule1 += 1
                     if field[r - 1][c] == 0:
                         rule2 += 1
                     if 0 < r < self.height - 1 and 0 < c < self.width - 1:
-                        if field[r][c - 1] != 0 or (r > 0 and field[r - 1][c - 1]):
+                        if field[r][c - 1] != 0 or (r > 0 and field[r - 1][c - 1] != 0):
                             rule3 += 1
 
             score += rule1 * (r ** 2)
@@ -398,7 +398,7 @@ while not done:
             else:
                 game.go_default()
         else:
-            action_seq = aStarSearch(game)
+            action_seq = bfs(game)
 
     # end of revision
     ######################################################################
