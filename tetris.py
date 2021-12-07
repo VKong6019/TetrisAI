@@ -100,6 +100,7 @@ class TetrisGame():
                     action_seq = genetics.state.get_best_state(genetics.weights)[2]
                     print("I AM HERE")
                     print(action_seq)
+                self.game.moves += 1
                 
             self.screen.fill(WHITE)
 

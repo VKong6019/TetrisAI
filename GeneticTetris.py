@@ -1,7 +1,7 @@
 import random
 import numpy as np
 
-import threading
+import time
 from models.Tetris import Tetris
 from models.Figure import Figure
     
@@ -18,6 +18,7 @@ class Solution():
         self.state = state
         self.fitness = None
         self.weights = self.generateWeights()
+        print(self.weights)
         self.simulations = NUM_SIMULATIONS
         self.max_simulations = SIMULATION_LENGTH
         self.mutation_prob = MUTATION_PROB
@@ -25,8 +26,8 @@ class Solution():
 
     # generate random genetic values that represents weights
     def generateWeights(self):
-        print("Generate genes: ", (np.random.random_sample(NUM_GENES) * 2) - 1)
-        return (np.random.random_sample(NUM_GENES) * 2) - 1
+        print("Generate genes: ", (np.random.random_sample(NUM_GENES) * 2))
+        return (np.random.random_sample(NUM_GENES) * 2)
 
     # gets solution's fitness if exists, if not, then calculates fitness
     def getFitness(self):
@@ -42,8 +43,10 @@ class Solution():
         for i in range(self.max_simulations):
             # print("SIMULATION #", i)
             if self.state.game.state == "gameover":
+                # time.sleep(2)
                 return np.average(scores)
             # generate random tetromino and simulate best move
+            print("HELLO 2")
             self.state.game.new_figure()
             # print("GENES: ", self.weights)
             best_state, best_score, _ = self.state.game.get_best_state(self.weights)
@@ -57,16 +60,20 @@ class Solution():
     # Cross genes between two solutions
     def reproduceWith(self, solution2):
         # Compare weighted average between genetic values of solutions
-        weighted_avg = self.fitness + solution2.fitness
+        weighted_avg = self.getFitness() + solution2.getFitness()
+        solution2_weight = solution2.weights.dot(solution2.getFitness())
         # Combine genes
-        combined_solution = ((self.weights * self.fitness) + (solution2.genes * solution2.fitness)) / weighted_avg
+        combined_solution = (self.weights * self.getFitness()) + (solution2_weight / weighted_avg)
         return combined_solution
 
     # Mutate weights
     def mutate(self, solution2):
+        print("ASJDKAJSKDJKAS")
+        print(self.weights)
         mutation_amt = np.random.random_sample(self.weights)
         if (mutation_amt < self.mutation_prob):
-            genes = (self.weights * (1 - mutation_amt)) + (solution2.genes * mutation_amt)
+            solution2_weight = solution2.weights.dot(mutation_amt)
+            genes = (self.weights * (1 - mutation_amt)) + solution2_weight
             self.weights = genes
         return self
 
@@ -81,7 +88,6 @@ class Genetics():
         self.fitness = None
 
     def weightedBy(self):
-        print("HELLO?")
         print(sorted(self.solutions, key=lambda gene: gene.getFitness()))
         return sorted(self.solutions, key=lambda gene: gene.getFitness())
 
@@ -108,7 +114,8 @@ class Genetics():
 
         for i in range(self.generations):
             print("GENERATION # ", i)
-            print([solution.calculateFitness() for solution in weights])
+            # time.sleep(2)
+            # print([solution.calculateFitness() for solution in weights])
             # Get top half fittest solutions
             top_half = len(self.solutions) // 2
             # select most fit individuals
@@ -117,10 +124,12 @@ class Genetics():
                 print("FIT: ", g.getFitness())
                 print("WEIGHTS: ", g.weights)
             # Crossbreed surviving solutions
-            for s in range(top_half, 2):
+            print("TOP: ", top_half)
+            for s in range(0, top_half, 2):
                 curr_solution = fittest_solutions[s]
                 # solution1, solution2 = self.weightedRandomChoices(self.solutions, weights) # TODO
-                if s == len(fittest_solutions):
+                print(curr_solution)
+                if s < len(fittest_solutions):
                     solution2 = fittest_solutions[s+1]
                     new_solution = curr_solution.reproduceWith(solution2)
                 
