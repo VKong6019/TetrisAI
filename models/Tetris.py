@@ -287,6 +287,8 @@ class Tetris:
                     print(self.figure.x)
                     print(best_move[0])
                     moves.append('right')
+                self.get_string_field()
+                # time.sleep(1)
             while self.figure.y is not best_move[1]:
                 self.figure.y += 1
                 moves.append('down')
@@ -332,11 +334,13 @@ class Tetris:
                 # print("STATE: ")
                 # print("X: ", copied_state.figure.x)
                 # print("Y: ", copied_state.figure.y)
-                # copied_state.get_string_field()
+                copied_state.get_string_field()
 
                 # weight score by solution's genes
                 raw_score = copied_state.get_score()
                 score = raw_score.dot(data)
+                print("SCORE ", score)
+                time.sleep(0.5)
 
                 # keep track of best move by LOWEST score
                 if score < best_score:
@@ -395,7 +399,7 @@ class Tetris:
                     return self.height - r - 1
         return 0
 
-    # Returns height of each column in array
+    # Returns height of all columns in array
     def get_heights(self, state):
         heights = []
         for c in range(state.shape[1]):
@@ -421,9 +425,15 @@ class Tetris:
     def get_score(self):
         state = np.asarray(self.field)
         heights = self.get_heights(state)
+         # get average of heights of non-zero columns
+        avg_heights = np.sum(heights) / np.count_nonzero(heights)
         holes = self.get_holes(heights, state)
+        lines = self.lines_cleared
+        if lines > 0:
+            lines ** -5.0
+            print(lines)
         max_height_diff = self.get_max_height_diff(state)
-        return np.array([np.sum(heights) ** 2.0, max_height_diff * 3.0, np.sum(holes) * 0.5])
+        return np.array([avg_heights ** 2.0, max_height_diff ** 1.3, np.sum(holes), lines])
 
     def best_move(self):
         best_score = float('inf')

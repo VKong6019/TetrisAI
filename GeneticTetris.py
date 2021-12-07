@@ -6,7 +6,8 @@ from models.Tetris import Tetris
 from models.Figure import Figure
     
 NUM_GENERATIONS = 10
-NUM_GENES = 3
+NUM_GENES = 4
+POPULATION_SIZE = 5
 MUTATION_PROB = 0.1
 NUM_SIMULATIONS = 4
 SIMULATION_LENGTH = 20
@@ -74,12 +75,13 @@ class Genetics():
 
     def __init__(self, game):
         self.state = game
-        self.size = NUM_GENES
+        self.size = POPULATION_SIZE
         self.solutions = [Solution(self.state) for i in range(self.size)] # initialize population of possible solutions
         self.generations = NUM_GENERATIONS
         self.fitness = None
 
     def weightedBy(self):
+        print("HELLO?")
         print(sorted(self.solutions, key=lambda gene: gene.getFitness()))
         return sorted(self.solutions, key=lambda gene: gene.getFitness())
 
@@ -103,8 +105,6 @@ class Genetics():
         # assign each individual a fitness value according to fitness function
         new_solutions = []
         weights = self.weightedBy() # list of corresponding fitness values for each individual
-        # threading.Thread(target=self.state.run_game).start()
-        print("HELLO")
 
         for i in range(self.generations):
             print("GENERATION # ", i)
@@ -113,7 +113,9 @@ class Genetics():
             top_half = len(self.solutions) // 2
             # select most fit individuals
             fittest_solutions = weights[top_half:]
-
+            for g in fittest_solutions:
+                print("FIT: ", g.getFitness())
+                print("WEIGHTS: ", g.weights)
             # Crossbreed surviving solutions
             for s in range(top_half, 2):
                 curr_solution = fittest_solutions[s]
