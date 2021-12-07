@@ -1,9 +1,10 @@
 import random
 import numpy as np
 
+from models.Tetris import Tetris
 from models.Figure import Figure
     
-NUM_GENERATIONS = 5
+NUM_GENERATIONS = 10
 NUM_GENES = 3
 MUTATION_PROB = 0.1
 NUM_SIMULATIONS = 4
@@ -60,10 +61,10 @@ class Solution():
 
 class Genetics():
 
-    def __init__(self, state):
-        self.problem = state # stores figure information (x, y, rotation)
+    def __init__(self, game):
+        self.state = game
         self.size = NUM_GENES
-        self.solutions = [Solution(state) for i in range(self.size)] # initialize population of possible solutions
+        self.solutions = [Solution(Tetris(20, 10)) for i in range(self.size)] # initialize population of possible solutions
         self.generations = NUM_GENERATIONS
         self.fitness = None
 

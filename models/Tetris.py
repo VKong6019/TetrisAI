@@ -54,7 +54,7 @@ class Tetris:
     # Calculates line breaks but doesn't generate new piece
     # Used for simulations
     def simulate_freeze(self):
-        print("FREEZE: ", self.figure.image())
+        # print("FREEZE: ", self.figure.image())
         for i in range(4):
             for j in range(4):
                 if i * 4 + j in self.figure.image():
@@ -274,8 +274,8 @@ class Tetris:
                 self.figure.y += 1
             self.figure.y -= 1
             self.freeze()
-            print("FINAL STATE: ")
-            self.get_string_field()
+            # print("FINAL STATE: ")
+            # self.get_string_field()
         return self, best_score
 
     # Calculate best move (piece drop) for given state and weights based on optimal play
@@ -289,8 +289,8 @@ class Tetris:
             # for every column drop piece and calculate score
             for x in range(-3, self.width - 3):
                 copied_state = copy.deepcopy(self) # simulate new states
-                copied_state.get_string_field()
-                print("+++++++++++")
+                # copied_state.get_string_field()
+                # print("+++++++++++")
                 # print("ORG: ", copied_state.figure.x)
                 if copied_state.intersect_at_x_y_fig(copied_state.figure, x, 0):
                     # print("OUTTA BOUND: ", x)
@@ -301,13 +301,13 @@ class Tetris:
                 while not copied_state.intersect_at_x_y_fig(copied_figure, x, copied_figure.y):
                     copied_figure.y += 1
                 copied_figure.y -= 1
-                print("INTERSECTED Y: ", copied_figure.y)
+                # print("INTERSECTED Y: ", copied_figure.y)
                 copied_state.simulate_freeze()
 
-                print("STATE: ")
-                print("X: ", copied_state.figure.x)
-                print("Y: ", copied_state.figure.y)
-                copied_state.get_string_field()
+                # print("STATE: ")
+                # print("X: ", copied_state.figure.x)
+                # print("Y: ", copied_state.figure.y)
+                # copied_state.get_string_field()
                 # weight score by solution's genes
                 raw_score = copied_state.get_score()
                 score = raw_score.dot(data)
