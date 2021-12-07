@@ -36,17 +36,22 @@ class TetrisGame():
         self.font = pygame.font.SysFont('comicsans', 25, True, False)
         self.font1 = pygame.font.SysFont('comicsans', 70, True, False)
         pygame.display.set_caption("Tetris")
-        self.game = Tetris(20, 10)
+        self.reset_game()
 
-        # Loop until the user clicks the close button.
-        self.isGameOver = False
-        self.clock = pygame.time.Clock()
     
     def display_game_over(self):
         text_game_over = self.font1.render("Game Over!", True, (250, 125, 125))
         self.screen.blit(text_game_over, [50, 200])
 
+    # start game over
+    def reset_game(self):
+        self.game = Tetris(20, 10)
+        # Loop until the user clicks the close button.
+        self.isGameOver = False
+        self.clock = pygame.time.Clock()
+
     def run_game(self):
+        print("GAME RUNNING NOW!")
         action_seq = []
         while not self.isGameOver:
             if self.game.figure is None:
@@ -74,25 +79,28 @@ class TetrisGame():
                 #     best_state = genetics.genetics(self)
                 #     print(best_state)
                     
-                    # if len(action_seq) > 0:
-                    #     action = action_seq.pop()
-                    #     if action == "right":
-                    #         self.game.go_side(1)
-                    #     elif action == "left":
-                    #         self.game.go_side(-1)
-                    #     elif action == "down":
-                    #         self.game.go_down()
-                    #     elif action == "space":
-                    #         self.game.go_space()
-                    #     elif action == "rotate":
-                    #         self.game.rotate()
-                    #     else:
-                    #         self.game.go_default()
-                    # else:
-                    #     # self.game.get_string_field()
-                    #     # AI heuristics
-                    #     action_seq = aStarSearch(self.game)
-                    
+                if len(action_seq) > 0:
+                    action = action_seq.pop()
+                    if action == "right":
+                        self.game.go_side(1)
+                    elif action == "left":
+                        self.game.go_side(-1)
+                    elif action == "down":
+                        self.game.go_down()
+                    elif action == "space":
+                        self.game.go_space()
+                    elif action == "rotate":
+                        self.game.rotate()
+                    else:
+                        self.game.go_default()
+                else:
+                    # self.game.get_string_field()
+                    # AI heuristics
+                    print("CALLED!")
+                    action_seq = genetics.state.get_best_state(genetics.weights)[2]
+                    print("I AM HERE")
+                    print(action_seq)
+                
             self.screen.fill(WHITE)
 
             for i in range(self.game.height):
@@ -117,6 +125,8 @@ class TetrisGame():
 
             if self.game.state == "gameover":
                 self.display_game_over()
+                # return score for game
+                return self.game.get_score()
 
             pygame.display.flip()
             self.clock.tick(fps)
@@ -125,5 +135,6 @@ class TetrisGame():
 
 
 game = TetrisGame()
+# game.run_game()
 genetics = Genetics(game)
 best_state = genetics.genetics()

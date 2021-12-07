@@ -13,7 +13,6 @@ rotation_map = {
     4: 'UP',
 }
 
-
 class Tetris:
     height = 0
     width = 0
@@ -39,6 +38,8 @@ class Tetris:
             for _ in range(width):
                 new_line.append(0)
             self.field.append(new_line)
+
+    
 
     # Generates new piece and calculates its optimal move
     def freeze(self):
@@ -106,9 +107,9 @@ class Tetris:
                             j + dx + figure.x < 0 or \
                             self.field[i + dy + figure.y][j + dx + figure.x] > 0:
                         intersection = True
-        print(intersection)
         return intersection
 
+    # TODO: Misses edge case
     def intersect_at_x_y_fig(self, figure, x, y):
         intersection = False
         for i in range(4):
@@ -258,56 +259,81 @@ class Tetris:
         # return a list of successors formatted as (new figure, action, cost)
         return successors
 
+    #########################################
     # GENETIC ALGORITHM:
     # Calculate best state given a solution's weights
     def get_best_state(self, data):
-        for _ in range(1):
-            # drop optimal moves
-            best_move, best_score = self.get_best_move(data)  # (self.figure.x, , self.figure.y, self.figure.rotation)
-            print("BEST MOVE: ", best_move)
-            print("BEST SCORE: ", best_score)
-            if best_move is not None:
-                self.figure.x = best_move[0]
-                self.figure.rotation = best_move[2]
-            # print("ACTUAL IMAGE: ", self.figure.image())
+        moves = []
+        # drop optimal moves
+        best_move, best_score = self.get_best_move(data)  # best_move = (self.figure.x, self.figure.y, self.figure.rotation)
+        print("BEST SCORE: ", best_score)
+        if best_move is not None:
+            # Rotate figure
+            while self.figure.rotation is not best_move[2]:
+                self.figure.rotate()
+                moves.append('rotate')
+            # Move left or right
+            while self.figure.x is not best_move[0]:
+                print(self.figure.x)
+                print(best_move[0])
+                if self.figure.x > best_move[0] and self.figure.x >= -3 and (self.figure.x != -1 and best_move[0] != -2):
+                    # TODO: Bug when self.figure.x = -1 and best_move[0] = -2
+                    self.figure.x =- 1
+                    print(self.figure.x)
+                    print(best_move[0])
+                    moves.append('left')
+                elif self.figure.x < best_move[0] and self.figure.x <= 7:
+                    self.figure.x += 1
+                    print(self.figure.x)
+                    print(best_move[0])
+                    moves.append('right')
+            while self.figure.y is not best_move[1]:
+                self.figure.y += 1
+                moves.append('down')
+        else:
+            # default
             while not self.intersects():
                 self.figure.y += 1
             self.figure.y -= 1
-            self.freeze()
-            # print("FINAL STATE: ")
-            # self.get_string_field()
-        return self, best_score
+
+        self.freeze()
+        print("FINAL STATE: ")
+        self.get_string_field()
+        # time.sleep(5)
+        return self, best_score, moves
+
 
     # Calculate best move (piece drop) for given state and weights based on optimal play
     def get_best_move(self, data):
-        best_score = 999999
+        best_score = float('inf')
         best_move = None
         # calculate best move for each rotation
-        rotations = self.figure.figures[self.figure.type]
-        for r in range(len(rotations)):
-            copied_figure = self.figure.figures[self.figure.type][r]
+        curr_figure = copy.deepcopy(self.figure)
+        # print(curr_figure.image())
+        figures = self.figure.figures[curr_figure.type]
+        for r in range(len(figures)):
+            curr_figure.rotation = r
+            # print("COPIED: ", curr_figure)
             # for every column drop piece and calculate score
-            for x in range(-3, self.width - 3):
+            for x in range(-3, self.width - 2):
                 copied_state = copy.deepcopy(self) # simulate new states
-                # copied_state.get_string_field()
-                # print("+++++++++++")
-                # print("ORG: ", copied_state.figure.x)
-                if copied_state.intersect_at_x_y_fig(copied_state.figure, x, 0):
+                curr_figure.x = x
+                if copied_state.intersect_at_x_y_fig(curr_figure, x, 0):
                     # print("OUTTA BOUND: ", x)
                     continue
-                copied_figure = Figure(x, copied_state.figure.y, copied_state.figure.type, copied_state.figure.color, r)
-                copied_state.figure = copied_figure
+                copied_state.figure = curr_figure
 
-                while not copied_state.intersect_at_x_y_fig(copied_figure, x, copied_figure.y):
-                    copied_figure.y += 1
-                copied_figure.y -= 1
-                # print("INTERSECTED Y: ", copied_figure.y)
+                while not copied_state.intersect_at_x_y_fig(curr_figure, x, curr_figure.y):
+                    curr_figure.y += 1
+                curr_figure.y -= 1
+                # print("INTERSECTED Y: ", curr_figure.y)
                 copied_state.simulate_freeze()
-
+                # time.sleep(1)
                 # print("STATE: ")
                 # print("X: ", copied_state.figure.x)
                 # print("Y: ", copied_state.figure.y)
                 # copied_state.get_string_field()
+
                 # weight score by solution's genes
                 raw_score = copied_state.get_score()
                 score = raw_score.dot(data)
@@ -317,11 +343,12 @@ class Tetris:
                     best_move = (copied_state.figure.x, copied_state.figure.y, copied_state.figure.rotation)
                     best_score = score
         
+        
         if self.state == "gameover":
             return None, sum(self.get_score())
         
-        # self.optimal_move = (best_move[0], best_move[1])
-        # self.optimal_rotation = best_move[2]
+        self.optimal_move = (best_move[0], best_move[1])
+        self.optimal_rotation = best_move[2]
         return best_move, best_score
 
     # we want the lowest score/prioritize the lowest score
@@ -396,9 +423,7 @@ class Tetris:
         heights = self.get_heights(state)
         holes = self.get_holes(heights, state)
         max_height_diff = self.get_max_height_diff(state)
-        # print("AVG HEIGHTS: ", np.mean(heights))
-        # print("NUM HOLES: ", np.sum(holes))
-        return np.array([np.mean(heights) ** 5.0, max_height_diff ** 1.2, np.sum(holes) ** 3.5])
+        return np.array([np.sum(heights) ** 2.0, max_height_diff * 3.0, np.sum(holes) * 0.5])
 
     def best_move(self):
         best_score = float('inf')

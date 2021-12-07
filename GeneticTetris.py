@@ -1,6 +1,7 @@
 import random
 import numpy as np
 
+import threading
 from models.Tetris import Tetris
 from models.Figure import Figure
     
@@ -8,36 +9,46 @@ NUM_GENERATIONS = 10
 NUM_GENES = 3
 MUTATION_PROB = 0.1
 NUM_SIMULATIONS = 4
-SIMULATION_LENGTH = 10
+SIMULATION_LENGTH = 20
 
 # Represents a possible solution for current game state
 class Solution():
     def __init__(self, state):
-        self.game = state
+        self.state = state
         self.fitness = None
         self.weights = self.generateWeights()
         self.simulations = NUM_SIMULATIONS
         self.max_simulations = SIMULATION_LENGTH
         self.mutation_prob = MUTATION_PROB
-
+        self.generations = NUM_GENERATIONS
 
     # generate random genetic values that represents weights
     def generateWeights(self):
         print("Generate genes: ", (np.random.random_sample(NUM_GENES) * 2) - 1)
         return (np.random.random_sample(NUM_GENES) * 2) - 1
 
+    # gets solution's fitness if exists, if not, then calculates fitness
+    def getFitness(self):
+        if self.fitness:
+            return self.fitness
+        return self.calculateFitness()
+
     # Calculate overall score rating for move
     def calculateFitness(self):
+        # start game for this solution
+        self.state.reset_game()
         scores = []
         for i in range(self.max_simulations):
-            print("SIMULATION #", i)
+            # print("SIMULATION #", i)
+            if self.state.game.state == "gameover":
+                return np.average(scores)
             # generate random tetromino and simulate best move
-            self.game.new_figure()
-            print("GENES: ", self.weights)
-            best_state, best_score = self.game.get_best_state(self.weights)
-            self.game = best_state
+            self.state.game.new_figure()
+            # print("GENES: ", self.weights)
+            best_state, best_score, _ = self.state.game.get_best_state(self.weights)
+            self.state.game = best_state
             scores.append(best_score)
-            self.game.get_best_move(self.weights)
+            self.state.game.get_best_move(self.weights)
 
         print("FITNESS: ", np.average(scores))
         return np.average(scores)
@@ -64,12 +75,13 @@ class Genetics():
     def __init__(self, game):
         self.state = game
         self.size = NUM_GENES
-        self.solutions = [Solution(Tetris(20, 10)) for i in range(self.size)] # initialize population of possible solutions
+        self.solutions = [Solution(self.state) for i in range(self.size)] # initialize population of possible solutions
         self.generations = NUM_GENERATIONS
         self.fitness = None
 
     def weightedBy(self):
-        return sorted(self.solutions, key=lambda gene: gene.calculateFitness())
+        print(sorted(self.solutions, key=lambda gene: gene.getFitness()))
+        return sorted(self.solutions, key=lambda gene: gene.getFitness())
 
     # TODO
     def weightedRandomChoices(self, solutions, weights):
@@ -91,6 +103,8 @@ class Genetics():
         # assign each individual a fitness value according to fitness function
         new_solutions = []
         weights = self.weightedBy() # list of corresponding fitness values for each individual
+        # threading.Thread(target=self.state.run_game).start()
+        print("HELLO")
 
         for i in range(self.generations):
             print("GENERATION # ", i)
@@ -113,5 +127,5 @@ class Genetics():
                         new_solution = curr_solution.mutate(new_solution)
                     print("NEW SOLUTION: ", new_solution)
                     new_solutions.append(new_solution)
-        print(new_solutions)
+        print("SOLUTIONS: ", new_solutions)
         return self.getBestIndividual(new_solutions)
