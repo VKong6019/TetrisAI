@@ -2,6 +2,8 @@ from collections import defaultdict
 
 import pygame
 import numpy as np
+import time
+import threading
 # from GeneticTetris import GeneticTetris
 from models.Tetris import Tetris
 from GeneticTetris import Genetics, Solution
@@ -37,6 +39,7 @@ class TetrisGame():
         self.font1 = pygame.font.SysFont('comicsans', 70, True, False)
         pygame.display.set_caption("Tetris")
         self.reset_game()
+        self.action_seq = []
 
     
     def display_game_over(self):
@@ -45,14 +48,18 @@ class TetrisGame():
 
     # start game over
     def reset_game(self):
+        print("GAME RESET")
+        time.sleep(2)
         self.game = Tetris(20, 10)
+        self.game.get_string_field()
         # Loop until the user clicks the close button.
         self.isGameOver = False
         self.clock = pygame.time.Clock()
 
     def run_game(self):
         print("GAME RUNNING NOW!")
-        action_seq = []
+        time.sleep(2)
+        print(self.isGameOver)
         while not self.isGameOver:
             if self.game.figure is None:
                 self.game.new_figure()
@@ -78,9 +85,9 @@ class TetrisGame():
                 #     genetics = Genetics()
                 #     best_state = genetics.genetics(self)
                 #     print(best_state)
-                    
-                if len(action_seq) > 0:
-                    action = action_seq.pop()
+
+                if len(self.action_seq) > 0:
+                    action = self.action_seq.pop()
                     if action == "right":
                         self.game.go_side(1)
                     elif action == "left":
@@ -96,10 +103,12 @@ class TetrisGame():
                 else:
                     # self.game.get_string_field()
                     # AI heuristics
-                    print("CALLED!")
-                    action_seq = genetics.state.get_best_state(genetics.weights)[2]
-                    print("I AM HERE")
-                    print(action_seq)
+                    # print("CALLED!")
+                    # action_seq = genetics.state.game.get_best_state(genetics.weights)[2]
+                    # time.sleep(2)
+                    # print("I AM HERE")
+                    # time.sleep(5)
+                    print(self.action_seq)
                 self.game.moves += 1
                 
             self.screen.fill(WHITE)
@@ -136,6 +145,6 @@ class TetrisGame():
 
 
 game = TetrisGame()
-# game.run_game()
+# threading.Thread(target=game.run_game).start()
 genetics = Genetics(game)
 best_state = genetics.genetics()

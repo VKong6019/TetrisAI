@@ -109,7 +109,6 @@ class Tetris:
                         intersection = True
         return intersection
 
-    # TODO: Misses edge case
     def intersect_at_x_y_fig(self, figure, x, y):
         intersection = False
         for i in range(4):
@@ -277,20 +276,11 @@ class Tetris:
                 moves.append('rotate')
             # Move left or right
             while self.figure.x is not best_move[0]:
-                # print("BEST MOVE: ", best_move[0])
-                # print("FIGURE X: ", self.figure.x)
                 if self.figure.x > best_move[0] and self.figure.x >= -3:
-                    # TODO: Bug when self.figure.x = -1 and best_move[0] = -2
                     self.figure.x -= 1
-                    # print("SHIFT LEFT: ", self.figure.x)
-                    # print(self.figure.x)
-                    # print(best_move[0])
                     moves.append('left')
                 elif self.figure.x < best_move[0] and self.figure.x <= 7:
                     self.figure.x += 1
-                    # print("SHIFT RIGHT: ", self.figure.x)
-                    # print(self.figure.x)
-                    # print(best_move[0])
                     moves.append('right')
                 # self.get_string_field()
                 # time.sleep(0.5)
@@ -303,8 +293,7 @@ class Tetris:
                 self.figure.y += 1
             self.figure.y -= 1
 
-        self.freeze()
-        # TODO: CHECK
+        self.freeze() 
         # print("FINAL STATE: ")
         # self.get_string_field()
         # time.sleep(5)
@@ -335,12 +324,12 @@ class Tetris:
                 curr_figure.y = y
                 copied_state.figure = curr_figure
                 copied_state.simulate_freeze()
-                copied_state.get_string_field()
+                # copied_state.get_string_field()
                 # weight score by solution's genes
                 raw_score = copied_state.get_score()
                 score = raw_score.dot(data)
-                print("SCORE ", score)
-                time.sleep(0.5)
+                # print("SCORE ", score)
+                # time.sleep(0.5)
 
                 # keep track of best move by LOWEST score
                 if score < best_score:
@@ -431,8 +420,8 @@ class Tetris:
         lines = self.lines_cleared
         if lines > 0:
             lines ** -5.0
-        max_height_diff = self.get_max_height_diff(state)
-        print(np.array([avg_heights ** 2.0, max_height_diff ** 1.3, np.sum(holes), lines]))
+        max_height_diff = self.get_max_height_diff(heights)
+        # print(np.array([avg_heights ** 2.0, max_height_diff ** 1.3, np.sum(holes), lines]))
         return np.array([avg_heights ** 2.0, max_height_diff ** 1.3, np.sum(holes), lines])
 
     def best_move(self):
