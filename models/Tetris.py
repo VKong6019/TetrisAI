@@ -75,7 +75,7 @@ class Tetris:
                 for i1 in range(i, 1, -1):
                     for j in range(self.width):
                         self.field[i1][j] = self.field[i1 - 1][j]
-        self.score += line_scores[lines]
+        self.score += lines * 100
 
     # Generates next Tetris piece
     def new_figure(self):
