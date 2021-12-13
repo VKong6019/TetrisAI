@@ -189,7 +189,7 @@ game = TetrisGame()
 # genetics = Genetics(game)
 # best_state = genetics.genetics()
 
-# # runs astar
+# runs astar
 # game.run_astar_or_greedy(True)
 #
 # # runs greedy
