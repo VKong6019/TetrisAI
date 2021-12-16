@@ -13,11 +13,8 @@ rotation_map = {
 
 
 class Tetris:
-    height = 0
-    width = 0
     x = 100
     y = 60
-    zoom = 20
 
     def __init__(self, height, width):
         self.height = height
@@ -31,10 +28,14 @@ class Tetris:
         self.best_score = float('inf')
         self.optimal_move = None
         self.optimal_rotation = None
+        self.generate_board()
 
-        for _ in range(height):
+    # Generates new empty board
+    def generate_board(self):
+        self.field = []
+        for _ in range(self.height):
             new_line = []
-            for _ in range(width):
+            for _ in range(self.width):
                 new_line.append(0)
             self.field.append(new_line)
 
@@ -49,10 +50,9 @@ class Tetris:
         if self.intersects():
             self.state = "gameover"
 
+    ### SIMULATION ONLY ###
     # Calculates line breaks but doesn't generate new piece
-    # Used for simulations
     def simulate_freeze(self):
-        # print("FREEZE: ", self.figure.image())
         for i in range(4):
             for j in range(4):
                 if i * 4 + j in self.figure.image():
@@ -75,13 +75,15 @@ class Tetris:
                 for i1 in range(i, 1, -1):
                     for j in range(self.width):
                         self.field[i1][j] = self.field[i1 - 1][j]
-        self.score += lines * 100
+        self.score += lines * 100 # multiplier
 
     # Generates next Tetris piece
     def new_figure(self):
         self.figure = Figure(3, 0, None, None, None)
-        self.best_move()
+        # NOTE: Enable this if using Greedy/A*
+        # self.set_optimal_move()
 
+    # Check if gameboard intersects with current Tetromino intersects with any existing game pieces or boundaries
     def intersects(self):
         intersection = False
         for i in range(4):
@@ -94,6 +96,8 @@ class Tetris:
                         intersection = True
         return intersection
 
+    ### SIMULATION ONLY ###
+    # Check if gameboard intersects with provided figure at a specific shift dx and dy
     def intersects_with_figure(self, figure, dx, dy):
         intersection = False
         for i in range(4):
@@ -106,11 +110,14 @@ class Tetris:
                         intersection = True
         return intersection
 
+
+    ### SIMULATION ONLY ###
+    # Check if gameboard intersects with provided figure at a specific shift dx and dy
     def intersect_at_x_y_fig(self, figure, x, y):
         intersection = False
         for i in range(4):
             for j in range(4):
-                if i * 4 + j in figure:
+                if i * 4 + j in figure.image():
                     if i + y > self.height - 1 or \
                             j + x > self.width - 1 or \
                             j + x < 0 or \
@@ -161,8 +168,9 @@ class Tetris:
         if self.intersects():
             self.figure.rotation = old_rotation
 
-        ### CALCULATIONS ###
+    ### ALGORITHMS ###
 
+    # Calculate heuristic height using weighted holes functiom
     def calc_heuristic_height(self, field, figure):
         for i1 in range(4):
             for j2 in range(4):
@@ -191,6 +199,7 @@ class Tetris:
 
         return score
 
+    # GREEDY: Calculate valid successors by calculating new state, action, and resulting cost
     def get_successors(self, curr_figure, actions):
         successors = []
 
@@ -209,6 +218,8 @@ class Tetris:
         copied_figure = Figure(curr_figure.x, curr_figure.y, curr_figure.type, curr_figure.color,
                                curr_figure.rotation)
         copied_figure.rotate()
+
+        # check boundaries
         if not self.intersects_with_figure(copied_figure, 0, 0):
             successors.append(
                 (copied_figure, "rotate", self.calc_heuristic_height(copy.deepcopy(self.field), copied_figure)))
@@ -233,6 +244,7 @@ class Tetris:
 
         return successors
 
+    # A-STAR: Calculate valid successors by calculating new state, action, and resulting cost
     def get_a_star_successors(self, state):
         successors = []
 
@@ -259,24 +271,20 @@ class Tetris:
         # return a list of successors formatted as (new figure, action, cost)
         return successors
 
-    #########################################
-    # GENETIC ALGORITHM:
-    # Calculate best state given a solution's weights
+
+    # GENETIC ALGORITHM: Calculate best state given a solution's weights
     def get_best_state(self, data):
-        self.new_figure()
+        self.new_figure() # generate new Tetromino
         moves = []
         # drop optimal moves
-        # self.get_string_field()
-        # time.sleep(0.5)
-        best_move, best_score = self.get_best_move(
-            data)  # best_move = (self.figure.x, self.figure.y, self.figure.rotation)
-        # print("BEST SCORE: ", best_score)
+        best_move, best_score = self.get_best_move(data)  # best_move = (self.figure.x, self.figure.y, self.figure.rotation)
+
         if best_move is not None:
             # Rotate figure
             while self.figure.rotation is not best_move[2]:
                 self.figure.rotate()
                 moves.append('rotate')
-            # Move left or right
+            # Move left, right, or down according to best move
             while self.figure.x is not best_move[0]:
                 if self.figure.x > best_move[0] and self.figure.x >= -3:
                     self.figure.x -= 1
@@ -284,8 +292,6 @@ class Tetris:
                 elif self.figure.x < best_move[0] and self.figure.x <= 7:
                     self.figure.x += 1
                     moves.append('right')
-                # self.get_string_field()
-                # time.sleep(0.5)
             while self.figure.y is not best_move[1]:
                 self.figure.y += 1
                 moves.append('down')
@@ -296,43 +302,41 @@ class Tetris:
             self.figure.y -= 1
 
         self.freeze()
-        # print("FINAL STATE: ")
-        # self.get_string_field()
-        # time.sleep(5)
+        # returns Tetris object, best score, and list of actions taken for move
         return self, best_score, moves
 
     # Calculate best move (piece drop) for given state and weights based on optimal play
     def get_best_move(self, data):
         best_score = float('inf')
         best_move = None
-        # calculate best move for each rotation
         curr_figure = copy.deepcopy(self.figure)
         figures = self.figure.figures[curr_figure.type]
+
+        # calculate best move for each rotation and column position
         for r in range(len(figures)):
             curr_figure.rotation = r
             # for every column drop piece and calculate score
             for x in range(-3, self.width - 2):
                 copied_state = copy.deepcopy(self)  # simulate new states
                 curr_figure.x = x
+
                 if copied_state.intersect_at_x_y_fig(curr_figure, x, 0):
-                    # print("OUTTA BOUND: ", x)
                     continue
+
+                # descend Tetromino vertically until intersects (drop)
                 y = 0
                 while not copied_state.intersect_at_x_y_fig(curr_figure, x, y):
                     y += 1
                 y -= 1
-                # print("INTERSECTED Y: ", curr_figure.y)
                 curr_figure.y = y
                 copied_state.figure = curr_figure
                 copied_state.simulate_freeze()
-                # copied_state.get_string_field()
+
                 # weight score by solution's genes
                 raw_score = copied_state.get_score()
                 score = raw_score.dot(data)
-                # print("SCORE ", score)
-                # time.sleep(0.5)
 
-                # keep track of best move by LOWEST score
+                # keep track of best move by LOWEST score (inverse scoring function)
                 if score < best_score:
                     best_move = (x, y, r)
                     best_score = score
@@ -340,11 +344,44 @@ class Tetris:
         if self.state == "gameover":
             return None, sum(self.get_score())
 
-        # self.optimal_move = (best_move[0], best_move[1])
-        # self.optimal_rotation = best_move[2]
+        self.optimal_move = (best_move[0], best_move[1])
+        self.optimal_rotation = best_move[2]
         return best_move, best_score
 
-    # we want the lowest score/prioritize the lowest score
+    # GREEDY/A*: Sets the optimal move given the rotation and position of the current Tetromino
+    def set_optimal_move(self):
+        best_score = float('inf')
+        work_x = None
+        work_rotation = None
+
+        for r in range(len(self.figure.figures[self.figure.type])):
+            work_figure = self.figure.figures[self.figure.type][r]
+            for x in range(-3, self.width):
+                if not self.intersect_at_x_y_fig(work_figure, x, 0):
+                    score = self.calculate_all_heuristics(work_figure, x)
+                    if work_x is None or best_score > score:
+                        work_rotation = r
+                        work_x = x
+                        best_score = score
+
+        # descend Tetromino vertically until intersects (drop)
+        y = 0
+        while not self.intersect_at_x_y_fig(self.figure.figures[self.figure.type][work_rotation], work_x, y):
+            y += 1
+        y -= 1
+
+        self.optimal_move = (work_x, y)
+        self.optimal_rotation = work_rotation
+
+    # Returns height of all columns in array (for calculate_all_heuristics)
+    def get_height(self, field):
+        for r in range(self.height):
+            for c in range(self.width):
+                if field[r][c] > 0:
+                    return self.height - r - 1
+        return 0
+
+    # Prioritize lowest score
     def calculate_all_heuristics(self, figure, dx):
         field = copy.deepcopy(self.field)
         score = 0
@@ -380,13 +417,6 @@ class Tetris:
 
         return score + height + holes
 
-    def get_height(self, field):
-        for r in range(self.height):
-            for c in range(self.width):
-                if field[r][c] > 0:
-                    return self.height - r - 1
-        return 0
-
     # Returns height of all columns in array
     def get_heights(self, state):
         heights = []
@@ -395,6 +425,7 @@ class Tetris:
             heights.append(height)
         return heights
 
+    # Returns holes found in entire board
     def get_holes(self, heights, state):
         holes = []
         for c in range(state.shape[1]):
@@ -409,46 +440,20 @@ class Tetris:
     def get_max_height_diff(self, state):
         return np.max(state) - np.min(state)
 
-    # Provides weighted score array
+    # Calculates weighted score array based on height, holes, and lines cleared
     def get_score(self):
         state = np.asarray(self.field)
         heights = self.get_heights(state)
-        # get average of heights of non-zero columns
-        avg_heights = np.sum(heights) / np.count_nonzero(heights)
+        avg_heights = np.sum(heights) / np.count_nonzero(heights) # get average of heights of non-zero columns
         holes = self.get_holes(heights, state)
         lines = self.lines_cleared
-        if lines > 0:
-            lines ** -5.0
         max_height_diff = self.get_max_height_diff(heights)
-        # print(np.array([avg_heights ** 2.0, max_height_diff ** 1.3, np.sum(holes), lines]))
-        return np.array([avg_heights ** 2.0, max_height_diff ** 1.3, np.sum(holes), lines])
-
-    def best_move(self):
-        best_score = float('inf')
-        work_x = None
-        work_rotation = None
-
-        for r in range(len(self.figure.figures[self.figure.type])):
-            work_figure = self.figure.figures[self.figure.type][r]
-            for x in range(-3, self.width):
-                if not self.intersect_at_x_y_fig(work_figure, x, 0):
-                    score = self.calculate_all_heuristics(work_figure, x)
-                    if work_x is None or best_score > score:
-                        work_rotation = r
-                        work_x = x
-                        best_score = score
-
-        y = 0
-        while not self.intersect_at_x_y_fig(self.figure.figures[self.figure.type][work_rotation], work_x, y):
-            y += 1
-        y -= 1
-
-        self.optimal_move = (work_x, y)
-        self.optimal_rotation = work_rotation
+        # if lines > 0:
+        #     lines ** -5.0
+        return np.array([avg_heights ** 3.0, max_height_diff ** 1.3, np.sum(holes) ** 2.0, lines * -20])
 
     def is_goal_state_a_star(self, state):
-        return state[0] == self.optimal_move[0] and state[1] == self.optimal_move[
-            1] and state[2] == self.optimal_rotation
+        return state[0] == self.optimal_move[0] and state[1] == self.optimal_move[1] and state[2] == self.optimal_rotation
 
     def manhattan_distance(self, xy):
         return abs(xy[0] - self.optimal_move[0]) + abs(xy[1] - self.optimal_move[1])

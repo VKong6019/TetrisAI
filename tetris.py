@@ -43,8 +43,6 @@ class TetrisGame():
 
     # start game over
     def reset_game(self):
-        print("GAME RESET")
-        time.sleep(2)
         self.game = Tetris(20, 10)
         self.game.get_string_field()
         # Loop until the user clicks the close button.
@@ -52,9 +50,6 @@ class TetrisGame():
         self.clock = pygame.time.Clock()
 
     def run_game(self):
-        print("GAME RUNNING NOW!")
-        time.sleep(2)
-        print(self.isGameOver)
         while not self.isGameOver:
             if self.game.figure is None:
                 self.game.new_figure()
@@ -76,10 +71,9 @@ class TetrisGame():
                     if event.key == pygame.K_ESCAPE:
                         self.game.__init__(20, 10)
 
-                # if self.game.state != "gameover":
-                #     genetics = Genetics()
-                #     best_state = genetics.genetics(self)
-                #     print(best_state)
+                if self.game.state != "gameover":
+                    genetics = Genetics()
+                    best_state = genetics.genetics(self)
 
                 if len(self.action_seq) > 0:
                     action = self.action_seq.pop()
@@ -184,10 +178,11 @@ class TetrisGame():
         self.screen.blit(text, [10, 10])
 
 
+##### GAME CONTROL #####
 game = TetrisGame()
 # threading.Thread(target=game.run_game).start()
-# genetics = Genetics(game)
-# best_state = genetics.genetics()
+genetics = Genetics(game)
+best_state = genetics.genetics()
 
 # runs astar
 # game.run_astar_or_greedy(True)
