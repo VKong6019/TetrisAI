@@ -44,7 +44,8 @@ class Solution():
         for _ in range(self.max_simulations):
             # print("SIMULATION #", i)
             if self.state.game.state == "gameover":
-                # time.sleep(2)
+                print("FITNESS: ", np.average(scores))
+                print("LINES CLEARED: ", self.state.game.lines_cleared)
                 return np.average(scores)
             # generate random tetromino and simulate best move
             # print("GENES: ", self.weights)
@@ -137,8 +138,6 @@ class Genetics():
             print("GENERATION # ", i)
             # list of corresponding fitness values for each individual
             weights = self.weightedBy() 
-            print("TOP SOLUTION: ", weights[-1].fitness, weights[-1].weights)
-            time.sleep(2)
             # Get top half fittest solutions
             top_half = len(self.solutions) // 2
             # select most fit individuals
@@ -153,6 +152,8 @@ class Genetics():
                 # mutate occasionally
                 if (random.random() < 0.2):
                     new_solution = curr_solution.mutate(new_solution)
+                
+                new_solution.state.game.get_string_field()
                 new_solutions.append(new_solution)
         # self.printGenerations(new_solutions)
         return self.getBestIndividual(new_solutions)

@@ -58,7 +58,6 @@ class TetrisGame():
 
     def run_game(self):
         print("GAME RUNNING NOW!")
-        time.sleep(2)
         print(self.isGameOver)
         while not self.isGameOver:
             if self.game.figure is None:
