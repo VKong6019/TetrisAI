@@ -10,7 +10,7 @@ colors = [
     (180, 34, 122),
 ]
 
-# tetrominoes represented as 4x4 matrix
+# Tetrominoes are represented within a 4x4 matrix where block types have a number of unique rotations. Each number in a block representation indicates the matrix square that is occupied by the figure shape. The Figure class also contains information about the Tetromino's location (x, y), block type, and color.
 class Figure:
     x = 0
     y = 0

@@ -5,14 +5,14 @@ import copy
 from models.Tetris import Tetris
 from models.Figure import Figure
     
-NUM_GENERATIONS = 10
+NUM_GENERATIONS = 3
 NUM_GENES = 4
 POPULATION_SIZE = 10
 MUTATION_PROB = 0.1
 NUM_SIMULATIONS = 4
 SIMULATION_LENGTH = 100
 
-# Represents a possible solution for current game state
+# Solution represents a Tetris game state and holds the current playing board, a fitness score, weights, which represent the 'genes' of the solution that is multiplied by the weighted heuristic, number of simulations, mutation probability, and number of generations.
 class Solution():
     def __init__(self, state):
         self.state = state
@@ -30,7 +30,6 @@ class Solution():
 
     # gets solution's fitness if exists, if not, then calculates fitness, which represents the solution's score
     def getFitness(self):
-        time.sleep(2)
         if self.fitness:
             return self.fitness
 
@@ -38,27 +37,23 @@ class Solution():
         self.state.reset_game()
         return self.calculateFitness()
 
-    # Calculate overall score rating for move
+    # Calculate overall score rating for move based on Tetris scoring
     def calculateFitness(self):
         scores = []
         for _ in range(self.max_simulations):
-            # print("SIMULATION #", i)
             if self.state.game.state == "gameover":
                 print("FITNESS: ", np.average(scores))
                 print("LINES CLEARED: ", self.state.game.lines_cleared)
                 return np.average(scores)
             # generate random tetromino and simulate best move
-            # print("GENES: ", self.weights)
             best_state, best_score, moves = self.state.game.get_best_state(self.weights)
-            # print("MOVES: ", moves)
-            # time.sleep(2)
             self.state.action_seq = moves
             self.state.game = best_state
             scores.append(best_score)
             self.state.game.get_best_move(self.weights)
             self.state.game.get_string_field()
-        print("FITNESS: ", np.average(scores))
-        print("LINES CLEARED: ", self.state.game.lines_cleared)
+        # print("FITNESS: ", np.average(scores))
+        # print("LINES CLEARED: ", self.state.game.lines_cleared)
         self.fitness = np.average(scores)
         return self.fitness
 
@@ -67,16 +62,15 @@ class Solution():
         # Compare weighted average between genetic values of solutions
         weighted_avg = self.getFitness() + solution2.getFitness()
         solution2_weight = solution2.weights.dot(solution2.getFitness())
+        
         # Combine gene weights
         for i, weight in enumerate(self.weights):
             self.weights[i] = ((weight * self.getFitness()) + (solution2_weight[i] * solution2.getFitness())) / weighted_avg
-        print(self.weights)
-        time.sleep(2)
+        self.calculateFitness()
         return self
 
     # Mutate weights
     def mutate(self, solution2):
-        # print(self.weights)
         mutation_amt = np.random.random_sample()
         if (mutation_amt < self.mutation_prob):
             solution2_weight = solution2.weights.dot(mutation_amt)
@@ -85,14 +79,12 @@ class Solution():
         return self
 
 
-# Represents the game state and objects relevant to genetics algorithm
+# Provides objects and evolutionary methods relevant to genetics algorithm in order to simulate genetics algorithm on a given population of Tetris games over a number of generations. The outcome is 
 class Genetics():
 
     def __init__(self, game):
         self.state = game
         self.size = POPULATION_SIZE
-        # TODO: FIX
-        # self.state.run_game()
         self.solutions = [Solution(self.state) for i in range(self.size)] # initialize population of possible solutions
         self.generations = NUM_GENERATIONS
         self.fitness = None
@@ -109,9 +101,6 @@ class Genetics():
         solutions = []
         for s in self.solutions:
             solutions.append((s.getFitness(), s.weights))
-            print("FIT: ", s.getFitness())
-            print("WEIGHTS: ", s.weights)
-        print(solutions)
         return solutions
 
     # prints results from each generation
@@ -120,28 +109,24 @@ class Genetics():
         print(solutions)
         for s in solutions:
             print('Fitness: ', s.getFitness())
-            print('Score: ', np.mean(s.getFitness()))
+            print('Weights: ', s.weights)
+            # print('Score: ', np.mean(s.getFitness()))
 
         print('#######################')
 
-
-    # TODO:
-    # - generate list of moves to return(?)
 
     # returns the best individual given possible solutions and fitness weight function
     def genetics(self):
         # assign each individual a fitness value according to fitness function
         new_solutions = []
-        # each solution represents solution's genes of scoring weights
 
+        # each solution represents solution's genes of scoring weights
         for i in range(self.generations):
+            time.sleep(5)
             print("GENERATION # ", i)
-            # list of corresponding fitness values for each individual
-            weights = self.weightedBy() 
-            # Get top half fittest solutions
-            top_half = len(self.solutions) // 2
-            # select most fit individuals
-            fittest_solutions = weights[top_half:]
+            weights = self.weightedBy() # List of corresponding fitness values for each individual
+            top_half = len(self.solutions) // 2 # Get top half fittest solutions
+            fittest_solutions = weights[top_half:] # Select most fit individuals
 
             # Crossbreed surviving solutions
             for s in range(0, top_half - 1, 2):
@@ -155,5 +140,8 @@ class Genetics():
                 
                 new_solution.state.game.get_string_field()
                 new_solutions.append(new_solution)
-        # self.printGenerations(new_solutions)
-        return self.getBestIndividual(new_solutions)
+                print("NEW FITNESS")
+                print(new_solution.calculateFitness())
+
+        self.printGenerations(new_solutions)
+        # return self.getBestIndividual(new_solutions)
